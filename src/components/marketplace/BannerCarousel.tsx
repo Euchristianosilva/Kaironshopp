@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { banners } from "@/lib/mock-data";
 
