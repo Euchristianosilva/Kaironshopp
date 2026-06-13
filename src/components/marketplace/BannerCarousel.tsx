@@ -28,12 +28,12 @@ export function BannerCarousel() {
                 {b.title}
               </h2>
               <p className="mt-3 text-base md:text-lg opacity-95 max-w-lg">{b.subtitle}</p>
-              <Link
-                to={b.href as "/"}
+              <a
+                href={b.href}
                 className="mt-6 inline-flex w-fit items-center gap-2 bg-background text-primary font-bold px-6 py-3 rounded-lg hover:scale-105 transition shadow-lg"
               >
                 {b.cta}
-              </Link>
+              </a>
             </div>
           </div>
         ))}
