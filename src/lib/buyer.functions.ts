@@ -54,7 +54,7 @@ export const createReview = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: prod } = await supabase.from("products").select("seller_id").eq("id", data.product_id).maybeSingle();
-    if (!prod) throw new Error("Produto não encontrado");
+    if (!prod || !prod.seller_id) throw new Error("Produto não encontrado");
     const { error } = await supabase.from("reviews").upsert({
       product_id: data.product_id,
       buyer_id: userId,
