@@ -70,8 +70,9 @@ export const createStripeCheckout = createServerFn({ method: "POST" })
       });
       itemRows.push({
         product_id: p.id,
-        quantity: i.qty,
-        unit_price_cents: unit,
+        title: p.title,
+        qty: i.qty,
+        unit_price: unit / 100,
         gross_cents: subtotal,
         seller_id: sellerId,
         stripe_account_id: seller.stripe_account_id,
