@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Header } from "@/components/marketplace/Header";
 import { Footer } from "@/components/marketplace/Footer";
 import { useStore } from "@/lib/store";
 import { formatBRL } from "@/lib/mock-data";
+import { createStripeCheckout } from "@/lib/checkout.functions";
+import { toast } from "sonner";
 import { CreditCard, QrCode, FileText, Lock, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/checkout")({
@@ -14,8 +17,32 @@ export const Route = createFileRoute("/checkout")({
 function Checkout() {
   const cart = useStore((s) => s.cart);
   const clear = useStore((s) => s.clearCart);
-  const [method, setMethod] = useState<"pix" | "credit" | "boleto">("pix");
+  const [method, setMethod] = useState<"pix" | "credit" | "boleto">("credit");
   const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const checkout = useServerFn(createStripeCheckout);
+
+  const handlePay = async () => {
+    if (cart.length === 0) return;
+    if (method !== "credit") {
+      clear();
+      setDone(true);
+      return;
+    }
+    try {
+      setLoading(true);
+      const { url } = await checkout({
+        data: {
+          origin: window.location.origin,
+          items: cart.map((i) => ({ name: i.product.name, image: i.product.image, price: i.product.price, qty: i.qty })),
+        },
+      });
+      if (url) window.location.href = url;
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao iniciar pagamento");
+      setLoading(false);
+    }
+  };
 
   const subtotal = cart.reduce((a, i) => a + i.product.price * i.qty, 0);
   const shipping = subtotal > 199 ? 0 : 24.9;
@@ -101,11 +128,11 @@ function Checkout() {
                 <div className="flex justify-between font-black text-lg pt-2"><span>Total</span><span className="text-primary">{formatBRL(total)}</span></div>
               </div>
               <button
-                disabled={cart.length === 0}
-                onClick={() => { clear(); setDone(true); }}
+                disabled={cart.length === 0 || loading}
+                onClick={handlePay}
                 className="w-full h-12 rounded-lg bg-gradient-brand text-primary-foreground font-bold flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-50"
               >
-                <Lock className="h-4 w-4" /> Pagar agora
+                <Lock className="h-4 w-4" /> {loading ? "Redirecionando..." : method === "credit" ? "Pagar com Stripe" : "Pagar agora"}
               </button>
               <div className="text-[11px] text-muted-foreground text-center">Pagamento 100% seguro · Criptografia SSL</div>
             </div>
