@@ -55,6 +55,60 @@ export type Database = {
           },
         ]
       }
+      conversations: {
+        Row: {
+          buyer_id: string
+          buyer_unread: number
+          created_at: string
+          id: string
+          last_message_at: string
+          last_message_preview: string | null
+          product_id: string | null
+          seller_id: string
+          seller_unread: number
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          buyer_unread?: number
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          product_id?: string | null
+          seller_id: string
+          seller_unread?: number
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          buyer_unread?: number
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          product_id?: string | null
+          seller_id?: string
+          seller_unread?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupons: {
         Row: {
           active: boolean
@@ -107,6 +161,41 @@ export type Database = {
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -930,6 +1019,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_conversation_participant: {
+        Args: { _conv_id: string; _user_id: string }
         Returns: boolean
       }
     }
