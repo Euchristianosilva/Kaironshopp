@@ -127,8 +127,7 @@ export const calculateShipping = createServerFn({ method: "POST" })
       if (cached && new Date(cached.expires_at) > new Date()) {
         options = cached.payload as Quote["options"];
       } else {
-        const env = (process.env.MELHOR_ENVIO_ENV ?? "sandbox").toLowerCase();
-        const endpoint = `${meBase()}/me/shipment/calculate`;
+        const endpoint = `${baseUrl}/me/shipment/calculate`;
         const payload = {
           from: { postal_code: fromZip },
           to: { postal_code: toZip },
