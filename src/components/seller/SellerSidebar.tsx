@@ -25,6 +25,7 @@ const GROUPS: { label: string; items: Item[] }[] = [
     items: [
       { to: "/seller/coupons", label: "Cupons", icon: TicketPercent },
       { to: "/seller/promotions", label: "Promoções", icon: Sparkles },
+      { to: "/seller/ads", label: "Anúncios", icon: Rocket },
       { to: "/seller/reviews", label: "Avaliações", icon: Star },
     ],
   },
