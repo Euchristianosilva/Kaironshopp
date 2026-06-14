@@ -1049,6 +1049,13 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          origin_address: string | null
+          origin_city: string | null
+          origin_complement: string | null
+          origin_district: string | null
+          origin_number: string | null
+          origin_state: string | null
+          origin_zip: string | null
           owner_id: string
           phone: string | null
           rating: number | null
@@ -1075,6 +1082,13 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          origin_address?: string | null
+          origin_city?: string | null
+          origin_complement?: string | null
+          origin_district?: string | null
+          origin_number?: string | null
+          origin_state?: string | null
+          origin_zip?: string | null
           owner_id: string
           phone?: string | null
           rating?: number | null
@@ -1101,6 +1115,13 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          origin_address?: string | null
+          origin_city?: string | null
+          origin_complement?: string | null
+          origin_district?: string | null
+          origin_number?: string | null
+          origin_state?: string | null
+          origin_zip?: string | null
           owner_id?: string
           phone?: string | null
           rating?: number | null
@@ -1118,6 +1139,27 @@ export type Database = {
           updated_at?: string
           vacation_mode?: boolean
           whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      shipping_quotes_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          expires_at: string
+          payload: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          expires_at: string
+          payload: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          expires_at?: string
+          payload?: Json
         }
         Relationships: []
       }
