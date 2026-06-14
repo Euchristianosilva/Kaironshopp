@@ -141,50 +141,68 @@ export type Database = {
       orders: {
         Row: {
           buyer_id: string
+          carrier: string | null
           created_at: string
+          delivered_at: string | null
+          fulfillment_status: string
           gross_cents: number
           id: string
           payment_method: string | null
           payment_status: string
           platform_fee_cents: number
           seller_id: string | null
+          seller_notes: string | null
+          shipped_at: string | null
           shipping_address: Json | null
           status: string
           stripe_payment_intent_id: string | null
           stripe_session_id: string | null
           total: number
+          tracking_code: string | null
           updated_at: string
         }
         Insert: {
           buyer_id: string
+          carrier?: string | null
           created_at?: string
+          delivered_at?: string | null
+          fulfillment_status?: string
           gross_cents?: number
           id?: string
           payment_method?: string | null
           payment_status?: string
           platform_fee_cents?: number
           seller_id?: string | null
+          seller_notes?: string | null
+          shipped_at?: string | null
           shipping_address?: Json | null
           status?: string
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
           total: number
+          tracking_code?: string | null
           updated_at?: string
         }
         Update: {
           buyer_id?: string
+          carrier?: string | null
           created_at?: string
+          delivered_at?: string | null
+          fulfillment_status?: string
           gross_cents?: number
           id?: string
           payment_method?: string | null
           payment_status?: string
           platform_fee_cents?: number
           seller_id?: string | null
+          seller_notes?: string | null
+          shipped_at?: string | null
           shipping_address?: Json | null
           status?: string
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
           total?: number
+          tracking_code?: string | null
           updated_at?: string
         }
         Relationships: [

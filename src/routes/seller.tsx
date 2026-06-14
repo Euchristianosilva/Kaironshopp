@@ -6,7 +6,7 @@ import { Footer } from "@/components/marketplace/Footer";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
-import { Plus, Store, X, CreditCard, CheckCircle2, AlertTriangle, Wallet } from "lucide-react";
+import { Plus, Store, X, CreditCard, CheckCircle2, AlertTriangle, Wallet, Package, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { createConnectAccount, refreshConnectStatus, createExpressDashboardLink } from "@/lib/connect.functions";
@@ -304,6 +304,12 @@ function ConnectCard({ seller }: { seller: Seller }) {
               >
                 Painel Stripe
               </button>
+              <Link to="/seller/orders" className="h-10 px-4 rounded-lg border border-border font-semibold text-sm grid place-items-center hover:bg-secondary">
+                <Package className="h-4 w-4 inline mr-1" /> Pedidos
+              </Link>
+              <Link to="/seller/customers" className="h-10 px-4 rounded-lg border border-border font-semibold text-sm grid place-items-center hover:bg-secondary">
+                <Users className="h-4 w-4 inline mr-1" /> Clientes
+              </Link>
               <Link to="/seller/finance" className="h-10 px-4 rounded-lg bg-primary text-primary-foreground font-semibold text-sm grid place-items-center">
                 <Wallet className="h-4 w-4 inline mr-1" /> Financeiro
               </Link>
