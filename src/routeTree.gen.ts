@@ -35,6 +35,7 @@ import { Route as SellerCustomersRouteImport } from './routes/seller.customers'
 import { Route as SellerCouponsRouteImport } from './routes/seller.coupons'
 import { Route as SellerAdsRouteImport } from './routes/seller.ads'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
+import { Route as OrderSuccessRouteImport } from './routes/order.success'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
 import { Route as AdminAdsRouteImport } from './routes/admin.ads'
@@ -172,6 +173,11 @@ const ProductIdRoute = ProductIdRouteImport.update({
   path: '/product/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrderSuccessRoute = OrderSuccessRouteImport.update({
+  id: '/order/success',
+  path: '/order/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategorySlugRoute = CategorySlugRouteImport.update({
   id: '/category/$slug',
   path: '/category/$slug',
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/admin/ads': typeof AdminAdsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
+  '/order/success': typeof OrderSuccessRoute
   '/product/$id': typeof ProductIdRoute
   '/seller/ads': typeof SellerAdsRoute
   '/seller/coupons': typeof SellerCouponsRoute
@@ -251,6 +258,7 @@ export interface FileRoutesByTo {
   '/admin/ads': typeof AdminAdsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
+  '/order/success': typeof OrderSuccessRoute
   '/product/$id': typeof ProductIdRoute
   '/seller/ads': typeof SellerAdsRoute
   '/seller/coupons': typeof SellerCouponsRoute
@@ -286,6 +294,7 @@ export interface FileRoutesById {
   '/admin/ads': typeof AdminAdsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
+  '/order/success': typeof OrderSuccessRoute
   '/product/$id': typeof ProductIdRoute
   '/seller/ads': typeof SellerAdsRoute
   '/seller/coupons': typeof SellerCouponsRoute
@@ -322,6 +331,7 @@ export interface FileRouteTypes {
     | '/admin/ads'
     | '/admin/finance'
     | '/category/$slug'
+    | '/order/success'
     | '/product/$id'
     | '/seller/ads'
     | '/seller/coupons'
@@ -355,6 +365,7 @@ export interface FileRouteTypes {
     | '/admin/ads'
     | '/admin/finance'
     | '/category/$slug'
+    | '/order/success'
     | '/product/$id'
     | '/seller/ads'
     | '/seller/coupons'
@@ -389,6 +400,7 @@ export interface FileRouteTypes {
     | '/admin/ads'
     | '/admin/finance'
     | '/category/$slug'
+    | '/order/success'
     | '/product/$id'
     | '/seller/ads'
     | '/seller/coupons'
@@ -422,6 +434,7 @@ export interface RootRouteChildren {
   MessagesRoute: typeof MessagesRoute
   SellerRoute: typeof SellerRouteWithChildren
   CategorySlugRoute: typeof CategorySlugRoute
+  OrderSuccessRoute: typeof OrderSuccessRoute
   ProductIdRoute: typeof ProductIdRoute
   ApiPublicStripeWebhookRoute: typeof ApiPublicStripeWebhookRoute
   ApiPublicHooksAdSchedulerRoute: typeof ApiPublicHooksAdSchedulerRoute
@@ -612,6 +625,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/order/success': {
+      id: '/order/success'
+      path: '/order/success'
+      fullPath: '/order/success'
+      preLoaderRoute: typeof OrderSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/category/$slug': {
       id: '/category/$slug'
       path: '/category/$slug'
@@ -721,6 +741,7 @@ const rootRouteChildren: RootRouteChildren = {
   MessagesRoute: MessagesRoute,
   SellerRoute: SellerRouteWithChildren,
   CategorySlugRoute: CategorySlugRoute,
+  OrderSuccessRoute: OrderSuccessRoute,
   ProductIdRoute: ProductIdRoute,
   ApiPublicStripeWebhookRoute: ApiPublicStripeWebhookRoute,
   ApiPublicHooksAdSchedulerRoute: ApiPublicHooksAdSchedulerRoute,
