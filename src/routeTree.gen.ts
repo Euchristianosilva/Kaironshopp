@@ -19,6 +19,7 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SellerOrdersRouteImport } from './routes/seller.orders'
 import { Route as SellerFinanceRouteImport } from './routes/seller.finance'
+import { Route as SellerCustomersRouteImport } from './routes/seller.customers'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
@@ -74,6 +75,11 @@ const SellerFinanceRoute = SellerFinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => SellerRoute,
 } as any)
+const SellerCustomersRoute = SellerCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => SellerRoute,
+} as any)
 const ProductIdRoute = ProductIdRouteImport.update({
   id: '/product/$id',
   path: '/product/$id',
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/seller/customers': typeof SellerCustomersRoute
   '/seller/finance': typeof SellerFinanceRoute
   '/seller/orders': typeof SellerOrdersRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/seller/customers': typeof SellerCustomersRoute
   '/seller/finance': typeof SellerFinanceRoute
   '/seller/orders': typeof SellerOrdersRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/seller/customers': typeof SellerCustomersRoute
   '/seller/finance': typeof SellerFinanceRoute
   '/seller/orders': typeof SellerOrdersRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/admin/finance'
     | '/category/$slug'
     | '/product/$id'
+    | '/seller/customers'
     | '/seller/finance'
     | '/seller/orders'
     | '/api/public/stripe-webhook'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/admin/finance'
     | '/category/$slug'
     | '/product/$id'
+    | '/seller/customers'
     | '/seller/finance'
     | '/seller/orders'
     | '/api/public/stripe-webhook'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/admin/finance'
     | '/category/$slug'
     | '/product/$id'
+    | '/seller/customers'
     | '/seller/finance'
     | '/seller/orders'
     | '/api/public/stripe-webhook'
@@ -281,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SellerFinanceRouteImport
       parentRoute: typeof SellerRoute
     }
+    '/seller/customers': {
+      id: '/seller/customers'
+      path: '/customers'
+      fullPath: '/seller/customers'
+      preLoaderRoute: typeof SellerCustomersRouteImport
+      parentRoute: typeof SellerRoute
+    }
     '/product/$id': {
       id: '/product/$id'
       path: '/product/$id'
@@ -323,11 +342,13 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface SellerRouteChildren {
+  SellerCustomersRoute: typeof SellerCustomersRoute
   SellerFinanceRoute: typeof SellerFinanceRoute
   SellerOrdersRoute: typeof SellerOrdersRoute
 }
 
 const SellerRouteChildren: SellerRouteChildren = {
+  SellerCustomersRoute: SellerCustomersRoute,
   SellerFinanceRoute: SellerFinanceRoute,
   SellerOrdersRoute: SellerOrdersRoute,
 }
@@ -351,3 +372,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
