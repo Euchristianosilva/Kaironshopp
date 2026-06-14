@@ -171,10 +171,11 @@ function ProductPage() {
                 </div>
               </div>
               <button
-                onClick={() => { addToCart(product, qty); navigate({ to: "/checkout" }); }}
-                className="w-full h-11 rounded-lg bg-gradient-brand text-primary-foreground font-bold flex items-center justify-center gap-2 hover:opacity-95"
+                onClick={buyNow}
+                disabled={buying}
+                className="w-full h-11 rounded-lg bg-gradient-brand text-primary-foreground font-bold flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-60"
               >
-                <ShoppingCart className="h-4 w-4" /> Comprar agora
+                <ShoppingCart className="h-4 w-4" /> {buying ? "Redirecionando..." : "Comprar agora"}
               </button>
               <button
                 onClick={() => { addToCart(product, qty); toast.success("Adicionado ao carrinho"); }}
