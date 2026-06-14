@@ -25,7 +25,7 @@ export const getSellerFinance = createServerFn({ method: "POST" })
     let transfers: any[] = [];
     if (seller.stripe_account_id && seller.stripe_charges_enabled) {
       try {
-        balance = await stripe.balance.retrieve({ stripeAccount: seller.stripe_account_id });
+        balance = await stripe.balance.retrieve({}, { stripeAccount: seller.stripe_account_id });
         const tr = await stripe.transfers.list({ destination: seller.stripe_account_id, limit: 20 });
         transfers = tr.data;
       } catch (e) {
