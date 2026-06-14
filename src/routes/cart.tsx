@@ -3,13 +3,20 @@ import { Header } from "@/components/marketplace/Header";
 import { Footer } from "@/components/marketplace/Footer";
 import { useStore } from "@/lib/store";
 import { formatBRL } from "@/lib/mock-data";
-import { Trash2, Plus, Minus, ShoppingBag, Tag, Truck } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingBag, Tag, Truck, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { calculateShipping } from "@/lib/shipping.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({ meta: [{ title: "Carrinho — MercaBrasil" }] }),
   component: CartPage,
 });
+
+type QuoteOption = { id: number | string; name: string; company: string; price: number; delivery_time: number };
+type SellerQuote = { seller_id: string; seller_name: string; options: QuoteOption[]; error?: string };
 
 function CartPage() {
   const cart = useStore((s) => s.cart);
@@ -17,9 +24,34 @@ function CartPage() {
   const remove = useStore((s) => s.removeFromCart);
   const [coupon, setCoupon] = useState("");
   const [cep, setCep] = useState("");
+  const [quotes, setQuotes] = useState<SellerQuote[]>([]);
+  const [picked, setPicked] = useState<Record<string, string>>({}); // seller_id -> option id
+
+  const calc = useServerFn(calculateShipping);
+  const mut = useMutation({
+    mutationFn: () => calc({
+      data: {
+        to_zip: cep,
+        items: cart.map((i) => ({ product_id: i.product.id, qty: i.qty })),
+      },
+    }),
+    onSuccess: (r) => {
+      setQuotes(r.quotes);
+      const defaults: Record<string, string> = {};
+      r.quotes.forEach((q) => {
+        if (q.options.length) defaults[q.seller_id] = String(q.options[0].id);
+      });
+      setPicked(defaults);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const subtotal = cart.reduce((a, i) => a + i.product.price * i.qty, 0);
-  const shipping = subtotal > 199 || cart.length === 0 ? 0 : 24.9;
+  const shipping = quotes.reduce((acc, q) => {
+    const pickedId = picked[q.seller_id];
+    const opt = q.options.find((o) => String(o.id) === pickedId);
+    return acc + (opt?.price ?? 0);
+  }, 0);
   const discount = coupon.toUpperCase() === "MERCA10" ? subtotal * 0.1 : 0;
   const total = subtotal + shipping - discount;
 
