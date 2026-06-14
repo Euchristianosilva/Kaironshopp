@@ -6,8 +6,10 @@ import { Footer } from "@/components/marketplace/Footer";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { categories, formatBRL } from "@/lib/mock-data";
-import { Plus, Package, Pencil, Trash2, Store, X } from "lucide-react";
+import { Plus, Package, Pencil, Trash2, Store, X, CreditCard, CheckCircle2, AlertTriangle, Wallet } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { createConnectAccount, refreshConnectStatus, createExpressDashboardLink } from "@/lib/connect.functions";
 
 export const Route = createFileRoute("/seller")({
   head: () => ({ meta: [{ title: "Painel do Vendedor — MercaBrasil" }] }),
@@ -21,6 +23,10 @@ type Seller = {
   name: string;
   description: string | null;
   logo_url: string | null;
+  stripe_account_id: string | null;
+  stripe_charges_enabled: boolean | null;
+  stripe_payouts_enabled: boolean | null;
+  stripe_onboarding_status: "pending" | "restricted" | "active" | null;
 };
 
 type ProductRow = {
@@ -132,6 +138,10 @@ function SellerDashboard({ userId }: { userId: string }) {
           </button>
         </div>
 
+        <ConnectCard seller={seller} />
+
+
+
         <div className="grid sm:grid-cols-3 gap-4">
           <StatCard label="Catálogo" value={String(products.length)} />
           <StatCard label="Ativos" value={String(active)} />
@@ -210,6 +220,121 @@ function SellerDashboard({ userId }: { userId: string }) {
           onClose={() => setEditing(null)}
         />
       )}
+    </div>
+  );
+}
+
+function ConnectCard({ seller }: { seller: Seller }) {
+  const qc = useQueryClient();
+  const createAcct = useServerFn(createConnectAccount);
+  const refresh = useServerFn(refreshConnectStatus);
+  const dashboard = useServerFn(createExpressDashboardLink);
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const status = seller.stripe_onboarding_status ?? "pending";
+  const isActive = status === "active" && seller.stripe_charges_enabled;
+  const hasAccount = !!seller.stripe_account_id;
+
+  const startOnboarding = async () => {
+    try {
+      setLoading("onboard");
+      const { url } = await createAcct({ data: { origin: window.location.origin } });
+      window.location.href = url!;
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao iniciar onboarding");
+      setLoading(null);
+    }
+  };
+
+  const syncStatus = async () => {
+    try {
+      setLoading("sync");
+      await refresh();
+      await qc.invalidateQueries({ queryKey: ["seller"] });
+      toast.success("Status atualizado");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao sincronizar");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const openDashboard = async () => {
+    try {
+      setLoading("dash");
+      const { url } = await dashboard();
+      window.open(url, "_blank");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  return (
+    <div className={`mt-6 border rounded-xl p-5 ${isActive ? "bg-success/5 border-success/30" : "bg-amber-500/5 border-amber-500/30"}`}>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-start gap-3">
+          {isActive ? (
+            <CheckCircle2 className="h-6 w-6 text-success shrink-0 mt-0.5" />
+          ) : (
+            <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
+          )}
+          <div>
+            <h3 className="font-bold flex items-center gap-2">
+              <CreditCard className="h-4 w-4" /> Recebimentos (Stripe Connect)
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isActive
+                ? "Sua conta está ativa. Você já pode receber pagamentos."
+                : status === "restricted"
+                ? "Sua conta está com restrições. Conclua as informações pendentes."
+                : hasAccount
+                ? "Onboarding incompleto. Finalize para começar a vender."
+                : "Configure sua conta para receber pagamentos diretamente do Stripe."}
+            </p>
+            <div className="text-xs text-muted-foreground mt-1">
+              Status: <span className="font-semibold uppercase">{status}</span>
+              {" · "}Charges: {seller.stripe_charges_enabled ? "✓" : "✗"}
+              {" · "}Payouts: {seller.stripe_payouts_enabled ? "✓" : "✗"}
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {!isActive && (
+            <button
+              onClick={startOnboarding}
+              disabled={loading === "onboard"}
+              className="h-10 px-4 rounded-lg bg-gradient-brand text-primary-foreground font-semibold text-sm disabled:opacity-60"
+            >
+              {loading === "onboard" ? "Abrindo..." : hasAccount ? "Continuar onboarding" : "Configurar pagamentos"}
+            </button>
+          )}
+          {hasAccount && (
+            <button
+              onClick={syncStatus}
+              disabled={loading === "sync"}
+              className="h-10 px-4 rounded-lg border border-border font-semibold text-sm hover:bg-secondary disabled:opacity-60"
+            >
+              {loading === "sync" ? "..." : "Atualizar status"}
+            </button>
+          )}
+          {isActive && (
+            <>
+              <button
+                onClick={openDashboard}
+                disabled={loading === "dash"}
+                className="h-10 px-4 rounded-lg border border-border font-semibold text-sm hover:bg-secondary disabled:opacity-60"
+              >
+                Painel Stripe
+              </button>
+              <Link to="/seller/finance" className="h-10 px-4 rounded-lg bg-primary text-primary-foreground font-semibold text-sm grid place-items-center">
+                <Wallet className="h-4 w-4 inline mr-1" /> Financeiro
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

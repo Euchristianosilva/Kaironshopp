@@ -34,7 +34,7 @@ function Checkout() {
       const { url } = await checkout({
         data: {
           origin: window.location.origin,
-          items: cart.map((i) => ({ name: i.product.name, image: i.product.image, price: i.product.price, qty: i.qty })),
+          items: cart.map((i) => ({ productId: i.product.id, qty: i.qty })),
         },
       });
       if (url) window.location.href = url;
