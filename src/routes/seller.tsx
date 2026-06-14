@@ -460,6 +460,33 @@ function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; pr
   const [images, setImages] = useState<any[]>([]);
   useEffect(() => { setImages(existingImages); }, [existingImages]);
 
+  // load existing variants when editing
+  const { data: existingVariants = [] } = useQuery({
+    queryKey: ["product-variants", product?.id],
+    enabled: !!product?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_variants")
+        .select("id,option1_name,option1_value,option2_name,option2_value,sku,price,stock,min_stock,is_active")
+        .eq("product_id", product!.id)
+        .order("position");
+      if (error) throw error;
+      return (data ?? []).map((v: any) => ({
+        id: v.id,
+        option1_name: v.option1_name ?? "",
+        option1_value: v.option1_value ?? "",
+        option2_name: v.option2_name ?? "",
+        option2_value: v.option2_value ?? "",
+        sku: v.sku ?? "",
+        price: v.price != null ? String(v.price) : "",
+        stock: String(v.stock ?? 0),
+        min_stock: String(v.min_stock ?? 0),
+        is_active: !!v.is_active,
+      })) as VariantDraft[];
+    },
+  });
+  useEffect(() => { setVariants(existingVariants); }, [existingVariants]);
+
   const saveMut = useMutation({
     mutationFn: async () => {
       const primary = images.find((i) => i.is_primary) ?? images[0];
@@ -473,6 +500,7 @@ function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; pr
         category_id: form.category_id,
         image_url: primary?.url ?? null,
         stock: Number(form.stock),
+        min_stock: Number(form.min_stock) || 0,
         free_shipping: form.free_shipping,
         is_active: form.is_active,
         brand: form.brand || null,
@@ -487,6 +515,10 @@ function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; pr
         material: form.material || null,
         warranty: form.warranty || null,
         condition: form.condition,
+        origin_zip: form.origin_zip || null,
+        own_delivery: form.own_delivery,
+        carrier: form.carrier || null,
+        has_variants: variants.length > 0,
       };
 
       let productId = product?.id;
@@ -499,7 +531,7 @@ function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; pr
         productId = data!.id;
       }
 
-      // sync images: delete existing rows for this product (storage files stay until removed via UI), then insert current
+      // sync images
       if (productId) {
         await supabase.from("product_images").delete().eq("product_id", productId);
         if (images.length) {
@@ -513,12 +545,34 @@ function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; pr
           const { error } = await supabase.from("product_images").insert(rows);
           if (error) throw error;
         }
+
+        // sync variants: replace
+        await supabase.from("product_variants").delete().eq("product_id", productId);
+        if (variants.length) {
+          const rows = variants.map((v, idx) => ({
+            product_id: productId!,
+            seller_id: sellerId,
+            option1_name: v.option1_name || null,
+            option1_value: v.option1_value || null,
+            option2_name: v.option2_name || null,
+            option2_value: v.option2_value || null,
+            sku: v.sku || null,
+            price: v.price ? Number(v.price) : null,
+            stock: Number(v.stock) || 0,
+            min_stock: Number(v.min_stock) || 0,
+            is_active: v.is_active,
+            position: idx,
+          }));
+          const { error } = await supabase.from("product_variants").insert(rows);
+          if (error) throw error;
+        }
       }
     },
     onSuccess: () => {
       toast.success(product ? "Produto atualizado" : "Produto criado");
       qc.invalidateQueries({ queryKey: ["seller-products"] });
       qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["product-variants", product?.id] });
       onClose();
     },
     onError: (e: any) => toast.error(e.message),
@@ -529,6 +583,7 @@ function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; pr
     { id: "media", label: "Mídias" },
     { id: "specs", label: "Especificações" },
     { id: "stock", label: "Estoque" },
+    { id: "variants", label: `Variações${variants.length ? ` (${variants.length})` : ""}` },
     { id: "shipping", label: "Frete" },
   ];
 
