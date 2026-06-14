@@ -37,6 +37,7 @@ import { Route as SellerAdsRouteImport } from './routes/seller.ads'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
+import { Route as AdminAdsRouteImport } from './routes/admin.ads'
 import { Route as ApiPublicStripeWebhookRouteImport } from './routes/api/public/stripe-webhook'
 import { Route as ApiPublicHooksAdSchedulerRouteImport } from './routes/api/public/hooks/ad-scheduler'
 
@@ -180,6 +181,11 @@ const AdminFinanceRoute = AdminFinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdsRoute = AdminAdsRouteImport.update({
+  id: '/ads',
+  path: '/ads',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ApiPublicStripeWebhookRoute = ApiPublicStripeWebhookRouteImport.update({
   id: '/api/public/stripe-webhook',
   path: '/api/public/stripe-webhook',
@@ -202,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/favorites': typeof FavoritesRoute
   '/messages': typeof MessagesRoute
   '/seller': typeof SellerRouteWithChildren
+  '/admin/ads': typeof AdminAdsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
@@ -233,6 +240,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/favorites': typeof FavoritesRoute
   '/messages': typeof MessagesRoute
+  '/admin/ads': typeof AdminAdsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/favorites': typeof FavoritesRoute
   '/messages': typeof MessagesRoute
   '/seller': typeof SellerRouteWithChildren
+  '/admin/ads': typeof AdminAdsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/messages'
     | '/seller'
+    | '/admin/ads'
     | '/admin/finance'
     | '/category/$slug'
     | '/product/$id'
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/favorites'
     | '/messages'
+    | '/admin/ads'
     | '/admin/finance'
     | '/category/$slug'
     | '/product/$id'
@@ -363,6 +374,7 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/messages'
     | '/seller'
+    | '/admin/ads'
     | '/admin/finance'
     | '/category/$slug'
     | '/product/$id'
@@ -600,6 +612,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFinanceRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/ads': {
+      id: '/admin/ads'
+      path: '/ads'
+      fullPath: '/admin/ads'
+      preLoaderRoute: typeof AdminAdsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/public/stripe-webhook': {
       id: '/api/public/stripe-webhook'
       path: '/api/public/stripe-webhook'
@@ -618,10 +637,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAdsRoute: typeof AdminAdsRoute
   AdminFinanceRoute: typeof AdminFinanceRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdsRoute: AdminAdsRoute,
   AdminFinanceRoute: AdminFinanceRoute,
 }
 
