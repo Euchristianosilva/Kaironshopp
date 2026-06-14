@@ -173,72 +173,17 @@ function SellerDashboard({ userId }: { userId: string }) {
 
         <ConnectCard seller={seller} />
 
+        <SellerStats sellerId={seller.id} products={products} />
 
+        <ProductsTable
+          products={products as any}
+          loading={prodLoading}
+          onEdit={(p) => setEditing(p as any)}
+          onDelete={(p) => deleteMut.mutate(p.id)}
+          onToggleActive={(p) => toggleActiveMut.mutate(p as any)}
+          onDuplicate={(p) => duplicateMut.mutate(p as any)}
+        />
 
-        <div className="grid sm:grid-cols-3 gap-4">
-          <StatCard label="Catálogo" value={String(products.length)} />
-          <StatCard label="Ativos" value={String(active)} />
-          <StatCard label="Valor de catálogo" value={formatBRL(revenue)} />
-        </div>
-
-        <div className="bg-card border border-border rounded-xl mt-6 overflow-hidden">
-          <div className="p-5 border-b border-border flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
-            <h2 className="font-bold text-lg">Meus produtos</h2>
-          </div>
-          {prodLoading ? (
-            <div className="p-10 text-center text-muted-foreground">Carregando...</div>
-          ) : products.length === 0 ? (
-            <div className="p-10 text-center text-muted-foreground">
-              Nenhum produto ainda. Clique em "Novo produto" para começar.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-secondary/40">
-                  <tr className="text-left">
-                    <th className="py-3 px-4 font-semibold">Produto</th>
-                    <th className="py-3 px-4 font-semibold">Categoria</th>
-                    <th className="py-3 px-4 font-semibold">Preço</th>
-                    <th className="py-3 px-4 font-semibold">Estoque</th>
-                    <th className="py-3 px-4 font-semibold">Status</th>
-                    <th className="py-3 px-4 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((p) => (
-                    <tr key={p.id} className="border-t border-border">
-                      <td className="py-3 px-4 flex items-center gap-3">
-                        <div className="h-10 w-10 bg-secondary/40 rounded overflow-hidden shrink-0">
-                          {p.image_url && <img src={p.image_url} alt="" className="w-full h-full object-cover" />}
-                        </div>
-                        <span className="font-medium line-clamp-1 max-w-[280px]">{p.title}</span>
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground">{p.category_slug}</td>
-                      <td className="py-3 px-4 font-bold">{formatBRL(Number(p.price))}</td>
-                      <td className="py-3 px-4">{p.stock ?? 0}</td>
-                      <td className="py-3 px-4">
-                        <span className={`text-xs px-2 py-1 rounded-full font-semibold ${p.is_active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-                          {p.is_active ? "Ativo" : "Inativo"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="inline-flex gap-1">
-                          <button onClick={() => setEditing(p)} className="p-2 rounded hover:bg-secondary" title="Editar"><Pencil className="h-4 w-4" /></button>
-                          <button
-                            onClick={() => { if (confirm(`Excluir "${p.title}"?`)) deleteMut.mutate(p.id); }}
-                            className="p-2 rounded hover:bg-destructive/10 text-destructive"
-                            title="Excluir"
-                          ><Trash2 className="h-4 w-4" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
 
         <div className="mt-6 text-center">
           <Link to="/" className="text-sm text-primary hover:underline">← Voltar para a loja</Link>
