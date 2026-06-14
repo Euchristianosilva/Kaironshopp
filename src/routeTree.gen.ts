@@ -33,6 +33,7 @@ import { Route as SellerHelpRouteImport } from './routes/seller.help'
 import { Route as SellerFinanceRouteImport } from './routes/seller.finance'
 import { Route as SellerCustomersRouteImport } from './routes/seller.customers'
 import { Route as SellerCouponsRouteImport } from './routes/seller.coupons'
+import { Route as SellerAdsRouteImport } from './routes/seller.ads'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
@@ -159,6 +160,11 @@ const SellerCouponsRoute = SellerCouponsRouteImport.update({
   path: '/coupons',
   getParentRoute: () => SellerRoute,
 } as any)
+const SellerAdsRoute = SellerAdsRouteImport.update({
+  id: '/ads',
+  path: '/ads',
+  getParentRoute: () => SellerRoute,
+} as any)
 const ProductIdRoute = ProductIdRouteImport.update({
   id: '/product/$id',
   path: '/product/$id',
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/seller/ads': typeof SellerAdsRoute
   '/seller/coupons': typeof SellerCouponsRoute
   '/seller/customers': typeof SellerCustomersRoute
   '/seller/finance': typeof SellerFinanceRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/seller/ads': typeof SellerAdsRoute
   '/seller/coupons': typeof SellerCouponsRoute
   '/seller/customers': typeof SellerCustomersRoute
   '/seller/finance': typeof SellerFinanceRoute
@@ -261,6 +269,7 @@ export interface FileRoutesById {
   '/admin/finance': typeof AdminFinanceRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/seller/ads': typeof SellerAdsRoute
   '/seller/coupons': typeof SellerCouponsRoute
   '/seller/customers': typeof SellerCustomersRoute
   '/seller/finance': typeof SellerFinanceRoute
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/admin/finance'
     | '/category/$slug'
     | '/product/$id'
+    | '/seller/ads'
     | '/seller/coupons'
     | '/seller/customers'
     | '/seller/finance'
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/admin/finance'
     | '/category/$slug'
     | '/product/$id'
+    | '/seller/ads'
     | '/seller/coupons'
     | '/seller/customers'
     | '/seller/finance'
@@ -355,6 +366,7 @@ export interface FileRouteTypes {
     | '/admin/finance'
     | '/category/$slug'
     | '/product/$id'
+    | '/seller/ads'
     | '/seller/coupons'
     | '/seller/customers'
     | '/seller/finance'
@@ -560,6 +572,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SellerCouponsRouteImport
       parentRoute: typeof SellerRoute
     }
+    '/seller/ads': {
+      id: '/seller/ads'
+      path: '/ads'
+      fullPath: '/seller/ads'
+      preLoaderRoute: typeof SellerAdsRouteImport
+      parentRoute: typeof SellerRoute
+    }
     '/product/$id': {
       id: '/product/$id'
       path: '/product/$id'
@@ -609,6 +628,7 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface SellerRouteChildren {
+  SellerAdsRoute: typeof SellerAdsRoute
   SellerCouponsRoute: typeof SellerCouponsRoute
   SellerCustomersRoute: typeof SellerCustomersRoute
   SellerFinanceRoute: typeof SellerFinanceRoute
@@ -627,6 +647,7 @@ interface SellerRouteChildren {
 }
 
 const SellerRouteChildren: SellerRouteChildren = {
+  SellerAdsRoute: SellerAdsRoute,
   SellerCouponsRoute: SellerCouponsRoute,
   SellerCustomersRoute: SellerCustomersRoute,
   SellerFinanceRoute: SellerFinanceRoute,
