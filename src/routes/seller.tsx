@@ -405,7 +405,7 @@ function CreateSellerForm({ userId }: { userId: string }) {
 
 function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; product: ProductRow | null; onClose: () => void }) {
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"basic" | "media" | "specs" | "stock" | "shipping">("basic");
+  const [tab, setTab] = useState<"basic" | "media" | "specs" | "stock" | "variants" | "shipping">("basic");
   const [form, setForm] = useState<any>({
     title: product?.title ?? "",
     description: product?.description ?? "",
@@ -414,6 +414,7 @@ function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; pr
     category_id: (product as any)?.category_id ?? null,
     category_slug: product?.category_slug ?? "eletronicos",
     stock: product?.stock ?? 10,
+    min_stock: (product as any)?.min_stock ?? 0,
     free_shipping: product?.free_shipping ?? false,
     is_active: product?.is_active ?? true,
     brand: (product as any)?.brand ?? "",
@@ -428,7 +429,12 @@ function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; pr
     material: (product as any)?.material ?? "",
     warranty: (product as any)?.warranty ?? "",
     condition: (product as any)?.condition ?? "new",
+    origin_zip: (product as any)?.origin_zip ?? "",
+    own_delivery: (product as any)?.own_delivery ?? false,
+    carrier: (product as any)?.carrier ?? "",
   });
+
+  const [variants, setVariants] = useState<VariantDraft[]>([]);
 
   // load existing images when editing
   const { data: existingImages = [] } = useQuery({
