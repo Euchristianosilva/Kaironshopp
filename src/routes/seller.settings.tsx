@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Save } from "lucide-react";
+import { SingleImageUpload } from "@/components/seller/SingleImageUpload";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/seller/settings")({
@@ -59,8 +60,24 @@ function Page() {
         <TabsContent value="general" className="space-y-4 bg-card border border-border rounded-xl p-5">
           <Field label="Nome da loja"><Input value={form.name ?? ""} onChange={onChange("name")} /></Field>
           <Field label="Descrição"><Textarea rows={3} value={form.description ?? ""} onChange={onChange("description")} /></Field>
-          <Field label="Logo (URL)"><Input value={form.logo_url ?? ""} onChange={onChange("logo_url")} placeholder="https://..." /></Field>
-          <Field label="Banner (URL)"><Input value={form.banner_url ?? ""} onChange={onChange("banner_url")} placeholder="https://..." /></Field>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <SingleImageUpload
+              sellerId={form.id}
+              folder="branding/logo"
+              label="Logo da loja"
+              aspect="square"
+              value={form.logo_url}
+              onChange={(url) => setForm({ ...form, logo_url: url })}
+            />
+            <SingleImageUpload
+              sellerId={form.id}
+              folder="branding/banner"
+              label="Banner da loja"
+              aspect="banner"
+              value={form.banner_url}
+              onChange={(url) => setForm({ ...form, banner_url: url })}
+            />
+          </div>
           <div className="flex items-center gap-3 pt-2 border-t border-border">
             <Switch checked={form.vacation_mode} onCheckedChange={set("vacation_mode")} />
             <div>
