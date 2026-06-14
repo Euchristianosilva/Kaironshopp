@@ -43,7 +43,6 @@ export const calculateShipping = createServerFn({ method: "POST" })
     if (!token) throw new Error("Integração Melhor Envio não configurada pelo administrador.");
     const baseUrl = meBaseFor(env);
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const ids = data.items.map((i) => i.product_id);
     const { data: products, error: pErr } = await supabaseAdmin
