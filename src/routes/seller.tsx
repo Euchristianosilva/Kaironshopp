@@ -315,14 +315,6 @@ function ConnectCard({ seller }: { seller: Seller }) {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-card border border-border rounded-xl p-5">
-      <div className="text-xs text-muted-foreground uppercase tracking-wider">{label}</div>
-      <div className="text-2xl font-black mt-1">{value}</div>
-    </div>
-  );
-}
 
 function CreateSellerForm({ userId }: { userId: string }) {
   const qc = useQueryClient();
