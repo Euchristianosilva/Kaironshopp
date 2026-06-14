@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Header } from "@/components/marketplace/Header";
 import { Footer } from "@/components/marketplace/Footer";
 import { useStore } from "@/lib/store";
 import { formatBRL } from "@/lib/mock-data";
+import { createStripeCheckout } from "@/lib/checkout.functions";
+import { toast } from "sonner";
 import { CreditCard, QrCode, FileText, Lock, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/checkout")({
