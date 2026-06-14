@@ -44,23 +44,11 @@ export const getOrCreateConversation = createServerFn({ method: "POST" })
     if (seller.owner_id === userId) throw new Error("Você não pode conversar com sua própria loja");
 
     const productId = data.product_id ?? null;
-    const { data: existing } = await supabase
-      .from("conversations")
-      .select("id")
-      .eq("buyer_id", userId)
-      .eq("seller_id", data.seller_id)
-      .is("product_id", productId === null ? null : undefined as any)
-      .eq("product_id", productId ?? "")
-      .maybeSingle();
-
+    const base = supabase.from("conversations").select("id").eq("buyer_id", userId).eq("seller_id", data.seller_id);
+    const { data: existing } = productId
+      ? await base.eq("product_id", productId).maybeSingle()
+      : await base.is("product_id", null).maybeSingle();
     if (existing) return { id: existing.id };
-
-    // Fallback exact match (handles null product_id correctly)
-    const q = supabase.from("conversations").select("id").eq("buyer_id", userId).eq("seller_id", data.seller_id);
-    const { data: exact } = productId
-      ? await q.eq("product_id", productId).maybeSingle()
-      : await q.is("product_id", null).maybeSingle();
-    if (exact) return { id: exact.id };
 
     const { data: created, error } = await supabase
       .from("conversations")
