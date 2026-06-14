@@ -31,14 +31,18 @@ function ProductPage() {
   const startChat = useServerFn(getOrCreateConversation);
   const [chatLoading, setChatLoading] = useState(false);
   const openChat = async (sellerId: string | null | undefined) => {
+    if (chatLoading) return;
     if (!user) { navigate({ to: "/auth" }); return; }
     if (!sellerId) { toast.error("Vendedor indisponível"); return; }
     setChatLoading(true);
     try {
       const { id: convId } = await startChat({ data: { seller_id: sellerId, product_id: id } });
-      navigate({ to: "/messages", search: { c: convId } });
-    } catch (e: any) { toast.error(e.message); }
-    finally { setChatLoading(false); }
+      await navigate({ to: "/messages", search: { c: convId } });
+    } catch (e: any) {
+      console.error("openChat failed", e);
+      toast.error(e?.message ?? "Não foi possível abrir o chat");
+      setChatLoading(false);
+    }
   };
 
   const { data: product, isLoading } = useQuery({
@@ -150,14 +154,17 @@ function ProductPage() {
                 </div>
               </div>
               <button
-                onClick={() => addToCart(product, qty)}
+                onClick={() => { addToCart(product, qty); navigate({ to: "/checkout" }); }}
                 className="w-full h-11 rounded-lg bg-gradient-brand text-primary-foreground font-bold flex items-center justify-center gap-2 hover:opacity-95"
               >
                 <ShoppingCart className="h-4 w-4" /> Comprar agora
               </button>
-              <Link to="/cart" className="block text-center w-full h-11 rounded-lg border-2 border-primary text-primary font-bold leading-[2.5rem] hover:bg-primary/5">
+              <button
+                onClick={() => { addToCart(product, qty); toast.success("Adicionado ao carrinho"); }}
+                className="w-full h-11 rounded-lg border-2 border-primary text-primary font-bold hover:bg-primary/5"
+              >
                 Adicionar ao carrinho
-              </Link>
+              </button>
               <button onClick={() => toggleFav(product.id)} className="w-full h-10 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:bg-secondary">
                 <Heart className={`h-4 w-4 ${isFav ? "fill-primary text-primary" : ""}`} /> {isFav ? "Favoritado" : "Adicionar aos favoritos"}
               </button>
