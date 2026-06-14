@@ -304,6 +304,12 @@ function ConnectCard({ seller }: { seller: Seller }) {
               >
                 Painel Stripe
               </button>
+              <Link to="/seller/orders" className="h-10 px-4 rounded-lg border border-border font-semibold text-sm grid place-items-center hover:bg-secondary">
+                <Package className="h-4 w-4 inline mr-1" /> Pedidos
+              </Link>
+              <Link to="/seller/customers" className="h-10 px-4 rounded-lg border border-border font-semibold text-sm grid place-items-center hover:bg-secondary">
+                <Users className="h-4 w-4 inline mr-1" /> Clientes
+              </Link>
               <Link to="/seller/finance" className="h-10 px-4 rounded-lg bg-primary text-primary-foreground font-semibold text-sm grid place-items-center">
                 <Wallet className="h-4 w-4 inline mr-1" /> Financeiro
               </Link>
