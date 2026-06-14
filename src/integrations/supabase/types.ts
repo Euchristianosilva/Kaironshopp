@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      addresses: {
+        Row: {
+          city: string
+          complement: string | null
+          created_at: string
+          district: string | null
+          id: string
+          is_default: boolean
+          label: string | null
+          number: string | null
+          phone: string | null
+          recipient: string
+          state: string
+          street: string
+          updated_at: string
+          user_id: string
+          zip: string
+        }
+        Insert: {
+          city: string
+          complement?: string | null
+          created_at?: string
+          district?: string | null
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          number?: string | null
+          phone?: string | null
+          recipient: string
+          state: string
+          street: string
+          updated_at?: string
+          user_id: string
+          zip: string
+        }
+        Update: {
+          city?: string
+          complement?: string | null
+          created_at?: string
+          district?: string | null
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          number?: string | null
+          phone?: string | null
+          recipient?: string
+          state?: string
+          street?: string
+          updated_at?: string
+          user_id?: string
+          zip?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
