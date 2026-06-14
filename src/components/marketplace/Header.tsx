@@ -8,6 +8,7 @@ import {
   Menu,
   MapPin,
   LogOut,
+  MessageCircle,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/hooks/use-auth";
@@ -100,6 +101,11 @@ export function Header() {
               <span className="absolute -top-0.5 -right-0.5 h-5 min-w-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold grid place-items-center">{favCount}</span>
             )}
           </Link>
+          {user && (
+            <Link to="/messages" aria-label="Mensagens" className="p-2.5 rounded-lg hover:bg-secondary transition">
+              <MessageCircle className="h-5 w-5" />
+            </Link>
+          )}
           <NotificationBell />
           <Link to="/cart" aria-label="Carrinho" className="relative p-2.5 rounded-lg hover:bg-secondary transition">
             <ShoppingCart className="h-5 w-5" />
