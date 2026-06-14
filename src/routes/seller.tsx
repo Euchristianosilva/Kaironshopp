@@ -6,8 +6,10 @@ import { Footer } from "@/components/marketplace/Footer";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { categories, formatBRL } from "@/lib/mock-data";
-import { Plus, Package, Pencil, Trash2, Store, X } from "lucide-react";
+import { Plus, Package, Pencil, Trash2, Store, X, CreditCard, CheckCircle2, AlertTriangle, Wallet } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { createConnectAccount, refreshConnectStatus, createExpressDashboardLink } from "@/lib/connect.functions";
 
 export const Route = createFileRoute("/seller")({
   head: () => ({ meta: [{ title: "Painel do Vendedor — MercaBrasil" }] }),
