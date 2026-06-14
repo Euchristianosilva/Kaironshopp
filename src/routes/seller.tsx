@@ -23,6 +23,10 @@ type Seller = {
   name: string;
   description: string | null;
   logo_url: string | null;
+  stripe_account_id: string | null;
+  stripe_charges_enabled: boolean | null;
+  stripe_payouts_enabled: boolean | null;
+  stripe_onboarding_status: "pending" | "restricted" | "active" | null;
 };
 
 type ProductRow = {
