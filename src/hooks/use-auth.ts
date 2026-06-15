@@ -16,13 +16,17 @@ export function useAuth() {
     queryFn: async () => {
       if (!user) return { role: null as AppRole | null, roles: [] as string[] };
       const email = user.email?.toLowerCase() ?? null;
+      if (email === OWNER_ADMIN_EMAIL) {
+        console.debug("[auth-access]", { email, role: "admin", source: "owner-email" });
+        return { role: "admin" as AppRole, roles: ["admin"] };
+      }
 
       const [rolesRes, sellerRes] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", user.id),
         supabase.from("sellers").select("id").eq("owner_id", user.id).maybeSingle(),
       ]);
 
-      if (rolesRes.error) throw rolesRes.error;
+      if (rolesRes.error) console.warn("[auth-access] user_roles read failed", rolesRes.error.message);
       const roles = (rolesRes.data ?? []).map((row) => row.role as string);
       const role: AppRole = email === OWNER_ADMIN_EMAIL || roles.includes("admin")
         ? "admin"
@@ -30,6 +34,7 @@ export function useAuth() {
           ? "seller"
           : "customer";
 
+      console.debug("[auth-access]", { email, role, roles, seller: !!sellerRes.data });
       return { role, roles };
     },
     enabled: !!user && !loading,

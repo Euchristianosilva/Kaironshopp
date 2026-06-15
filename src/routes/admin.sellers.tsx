@@ -7,10 +7,10 @@ import { listSellers, setSellerStatus } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin/sellers")({
   head: () => ({ meta: [{ title: "Vendedores — Admin" }] }),
-  component: Page,
+  component: AdminSellersPage,
 });
 
-function Page() {
+export function AdminSellersPage() {
   const fn = useServerFn(listSellers);
   const update = useServerFn(setSellerStatus);
   const qc = useQueryClient();

@@ -101,7 +101,7 @@ function DashboardContent() {
   const quickActions: Array<{ to: string; label: string; icon: any }> = [
     { to: "/admin/coupons", label: "Novo cupom", icon: Ticket },
     { to: "/admin/banners", label: "Novo banner", icon: ImageIcon },
-    { to: "/admin/sellers", label: "Aprovar vendedor", icon: Store },
+    { to: "/admin/vendors", label: "Aprovar vendedor", icon: Store },
     { to: "/admin/categories", label: "Criar categoria", icon: Tags },
     { to: "/admin/ads", label: "Nova campanha", icon: Megaphone },
   ];
