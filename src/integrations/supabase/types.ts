@@ -1276,6 +1276,7 @@ export type Database = {
           last_error_body: string | null
           last_error_endpoint: string | null
           last_error_status: number | null
+          last_request_context: Json | null
           last_request_headers: Json | null
           last_request_method: string | null
           last_request_payload: Json | null
@@ -1294,6 +1295,7 @@ export type Database = {
           last_error_body?: string | null
           last_error_endpoint?: string | null
           last_error_status?: number | null
+          last_request_context?: Json | null
           last_request_headers?: Json | null
           last_request_method?: string | null
           last_request_payload?: Json | null
@@ -1312,6 +1314,7 @@ export type Database = {
           last_error_body?: string | null
           last_error_endpoint?: string | null
           last_error_status?: number | null
+          last_request_context?: Json | null
           last_request_headers?: Json | null
           last_request_method?: string | null
           last_request_payload?: Json | null

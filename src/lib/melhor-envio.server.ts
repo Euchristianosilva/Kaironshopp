@@ -19,6 +19,7 @@ type DiagnosticInput = {
   responseBody?: string | null;
   requestPayload?: unknown;
   requestHeaders?: Record<string, string>;
+  requestContext?: Record<string, unknown>;
   reauthRequired?: boolean;
   reauthReason?: string | null;
   reauthUrl?: string | null;
@@ -58,18 +59,39 @@ function redactSensitiveProviderBody(text: string) {
 }
 
 function responseForStorage(text: string) {
-  return redactSensitiveProviderBody(text).slice(0, 12000);
+  return redactSensitiveProviderBody(text);
+}
+
+function mask(value: string | null | undefined) {
+  if (!value) return null;
+  if (value.length <= 6) return `${value.slice(0, 2)}…${value.slice(-1)}`;
+  return `${value.slice(0, 3)}…${value.slice(-2)}`;
+}
+
+function requestContextFor(cfg: MelhorEnvioConfig | null | undefined, env: string, endpoint: string) {
+  return {
+    http_endpoint: endpoint,
+    environment: env === "production" ? "Production" : "Sandbox",
+    oauth_scopes: MELHOR_ENVIO_SCOPE_TEXT,
+    redirect_uri: cfg?.callback_url ?? null,
+    client_id_masked: mask(cfg?.client_id),
+  };
+}
+
+function configuredAccessToken(cfg: MelhorEnvioConfig | null | undefined) {
+  return cfg?.access_token || process.env.MELHOR_ENVIO_ACCESS_TOKEN || process.env.MELHOR_ENVIO_TOKEN || null;
 }
 
 export async function recordMelhorEnvioDiagnostic(supabaseAdmin: any, input: DiagnosticInput) {
   const now = new Date().toISOString();
+  const responseBody = responseForStorage(input.responseBody ?? "");
   const patch: Record<string, unknown> = {
     id: true,
     last_env: input.env,
     last_error_endpoint: input.endpoint,
     last_request_method: input.method,
     last_error_status: input.status,
-    last_response_body: responseForStorage(input.responseBody ?? ""),
+    last_response_body: responseBody,
     requested_scopes: MELHOR_ENVIO_SCOPE_TEXT,
     reauth_required: Boolean(input.reauthRequired),
     reauth_reason: input.reauthReason ?? null,
@@ -79,6 +101,7 @@ export async function recordMelhorEnvioDiagnostic(supabaseAdmin: any, input: Dia
 
   if (input.requestPayload !== undefined) patch.last_request_payload = input.requestPayload;
   if (input.requestHeaders !== undefined) patch.last_request_headers = input.requestHeaders;
+  if (input.requestContext !== undefined) patch.last_request_context = input.requestContext;
 
   if (input.ok) {
     patch.last_success_at = now;
@@ -86,8 +109,20 @@ export async function recordMelhorEnvioDiagnostic(supabaseAdmin: any, input: Dia
     patch.last_error_body = null;
   } else {
     patch.last_error_at = now;
-    patch.last_error_body = responseForStorage(input.responseBody ?? "");
+    patch.last_error_body = responseBody;
   }
+
+  const logPayload = {
+    http_status: input.status,
+    response_body: responseBody,
+    endpoint_called: input.endpoint,
+    oauth_scopes: MELHOR_ENVIO_SCOPE_TEXT,
+    environment: input.env === "production" ? "Production" : "Sandbox",
+    redirect_uri: input.requestContext?.redirect_uri ?? null,
+    client_id_masked: input.requestContext?.client_id_masked ?? null,
+  };
+  if (input.ok) console.info("[melhor-envio] api-response", logPayload);
+  else console.error("[melhor-envio] api-response", logPayload);
 
   await supabaseAdmin.from("shipping_diagnostics").upsert(patch as never);
 }
@@ -147,6 +182,7 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
   const env = cfg.environment ?? "sandbox";
   const endpoint = `${oauthBaseFor(env)}/oauth/token`;
   const method = "POST";
+  const requestContext = requestContextFor(cfg, env, endpoint);
   const requestHeaders = {
     Accept: "application/json",
     "Content-Type": "application/x-www-form-urlencoded",
@@ -178,6 +214,7 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
           status: res.status,
           responseBody: text,
           requestHeaders,
+          requestContext,
         });
       } else {
         await recordMelhorEnvioDiagnostic(supabaseAdmin, {
@@ -188,6 +225,7 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
           status: res.status,
           responseBody: text,
           requestHeaders,
+          requestContext,
         });
       }
       return cfg;
@@ -210,6 +248,7 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
       status: res.status,
       responseBody: text,
       requestHeaders,
+      requestContext,
     });
     return { ...cfg, ...patch };
   } catch (e) {
@@ -221,6 +260,7 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
       status: 0,
       responseBody: e instanceof Error ? e.message : String(e),
       requestHeaders,
+      requestContext,
     });
     return cfg;
   }
@@ -228,8 +268,10 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
 
 export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioConfig, input: MelhorEnvioRequestInput) {
   let activeCfg = await refreshAccessTokenIfNeeded(supabaseAdmin, cfg);
+  const cfgForAuth = activeCfg ?? cfg;
   const env = activeCfg?.environment ?? "sandbox";
   const method = input.method ?? "GET";
+  const requestContext = requestContextFor(activeCfg, env, input.endpoint);
   const requestHeaders = {
     Accept: "application/json",
     "Content-Type": "application/json",
@@ -251,7 +293,8 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
     return { res, text, json: safeJson(text) };
   };
 
-  if (!activeCfg?.access_token) {
+  let token = configuredAccessToken(activeCfg);
+  if (!token) {
     return {
       ok: false,
       status: 0,
@@ -263,12 +306,14 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
     };
   }
 
-  let attempt = await run(activeCfg.access_token);
-  if (attempt.res.status === 401 && activeCfg.refresh_token) {
-    const refreshed = await refreshAccessTokenIfNeeded(supabaseAdmin, activeCfg, true);
-    if (refreshed?.access_token && refreshed.access_token !== activeCfg.access_token) {
+  let attempt = await run(token);
+  if (attempt.res.status === 401 && cfgForAuth.refresh_token) {
+    const refreshed = await refreshAccessTokenIfNeeded(supabaseAdmin, cfgForAuth, true);
+    const refreshedToken = refreshed?.access_token;
+    if (typeof refreshedToken === "string" && refreshedToken.length > 0 && refreshedToken !== token) {
       activeCfg = refreshed;
-      attempt = await run(activeCfg.access_token);
+      token = refreshedToken;
+      attempt = await run(token);
     }
   }
 
@@ -278,7 +323,7 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
     const reason = attempt.res.status === 403
       ? "Token sem permissão para este endpoint ou ambiente incompatível. Reautorize com os escopos atualizados e confira Sandbox/Produção."
       : "Token inválido ou expirado. Reautorize o OAuth.";
-    reauth = await markMelhorEnvioRequiresOAuth(supabaseAdmin, activeCfg, reason, {
+    reauth = await markMelhorEnvioRequiresOAuth(supabaseAdmin, cfgForAuth, reason, {
       ok: false,
       env,
       endpoint: input.endpoint,
@@ -287,6 +332,7 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
       responseBody: attempt.text,
       requestPayload: input.requestPayload,
       requestHeaders,
+      requestContext,
     });
   } else {
     await recordMelhorEnvioDiagnostic(supabaseAdmin, {
@@ -298,6 +344,7 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
       responseBody: attempt.text,
       requestPayload: input.requestPayload,
       requestHeaders,
+      requestContext,
     });
   }
 

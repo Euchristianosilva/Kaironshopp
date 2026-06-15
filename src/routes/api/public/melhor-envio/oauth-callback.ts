@@ -50,6 +50,13 @@ export const Route = createFileRoute("/api/public/melhor-envio/oauth-callback")(
           "Content-Type": "application/x-www-form-urlencoded",
           "User-Agent": MELHOR_ENVIO_USER_AGENT,
         };
+        const requestContext = {
+          http_endpoint: endpoint,
+          environment: env === "production" ? "Production" : "Sandbox",
+          oauth_scopes: MELHOR_ENVIO_SCOPE_TEXT,
+          redirect_uri: row.callback_url,
+          client_id_masked: row.client_id?.length > 6 ? `${row.client_id.slice(0, 3)}…${row.client_id.slice(-2)}` : "••••",
+        };
 
         try {
           const res = await fetch(endpoint, {
@@ -76,6 +83,7 @@ export const Route = createFileRoute("/api/public/melhor-envio/oauth-callback")(
               status: res.status,
               responseBody: text,
               requestHeaders,
+              requestContext,
             });
             return redirectToAdmin(request, "error", "Não foi possível gerar os tokens.");
           }
@@ -99,6 +107,7 @@ export const Route = createFileRoute("/api/public/melhor-envio/oauth-callback")(
             status: res.status,
             responseBody: text,
             requestHeaders,
+            requestContext,
           });
 
           return redirectToAdmin(request, "success");
@@ -111,6 +120,7 @@ export const Route = createFileRoute("/api/public/melhor-envio/oauth-callback")(
             status: 0,
             responseBody: e instanceof Error ? e.message : String(e),
             requestHeaders,
+            requestContext,
           });
           return redirectToAdmin(request, "error", "Falha ao concluir autorização.");
         }
