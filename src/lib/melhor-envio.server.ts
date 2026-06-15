@@ -253,6 +253,7 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
   let activeCfg = await refreshAccessTokenIfNeeded(supabaseAdmin, cfg);
   const env = activeCfg?.environment ?? "sandbox";
   const method = input.method ?? "GET";
+  const requestContext = requestContextFor(activeCfg, env, input.endpoint);
   const requestHeaders = {
     Accept: "application/json",
     "Content-Type": "application/json",
@@ -310,6 +311,7 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
       responseBody: attempt.text,
       requestPayload: input.requestPayload,
       requestHeaders,
+      requestContext,
     });
   } else {
     await recordMelhorEnvioDiagnostic(supabaseAdmin, {
@@ -321,6 +323,7 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
       responseBody: attempt.text,
       requestPayload: input.requestPayload,
       requestHeaders,
+      requestContext,
     });
   }
 
