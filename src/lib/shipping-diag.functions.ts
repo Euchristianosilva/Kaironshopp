@@ -251,6 +251,10 @@ export const pingMelhorEnvio = createServerFn({ method: "POST" })
         env,
         endpoint,
         error: e instanceof Error ? e.message : "Erro desconhecido",
+        body: null,
+        user: null,
+        reauth_url: null,
+        reauth_reason: null,
       };
     }
   });
