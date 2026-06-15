@@ -35,7 +35,7 @@ export const getShippingDiagnostics = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    let { data: cfg } = await supabaseAdmin
+    const { data: cfg } = await supabaseAdmin
       .from("melhor_envio_config")
       .select("*")
       .eq("id", true)
@@ -61,11 +61,13 @@ export const getShippingDiagnostics = createServerFn({ method: "GET" })
         webhook_url: row.webhook_url ?? "https://kaironshopp.lovable.app/api/public/melhor-envio/webhook",
         last_sync_at: row.last_sync_at ?? null,
         updated_at: row.updated_at ?? null,
+        oauth_scopes: row.oauth_scopes ?? MELHOR_ENVIO_SCOPE_TEXT,
       },
       base_url: meBaseFor(env),
       oauth: {
         authorize_base_url: `${oauthBaseFor(env)}/oauth/authorize`,
-        scopes: OAUTH_SCOPES,
+        scopes: MELHOR_ENVIO_SCOPE_TEXT,
+        endpoints: MELHOR_ENVIO_ENDPOINT_AUDIT,
       },
       diagnostics: diag ?? null,
     };
@@ -101,6 +103,7 @@ export const startMelhorEnvioOAuth = createServerFn({ method: "POST" })
       token_expires_at: null,
       oauth_state: state,
       oauth_state_expires_at: expiresAt,
+      oauth_scopes: MELHOR_ENVIO_SCOPE_TEXT,
       updated_by: context.userId,
       updated_at: new Date().toISOString(),
     } as never);
@@ -110,7 +113,7 @@ export const startMelhorEnvioOAuth = createServerFn({ method: "POST" })
       client_id: data.client_id,
       redirect_uri: urls.callback_url,
       response_type: "code",
-      scope: OAUTH_SCOPES,
+      scope: MELHOR_ENVIO_SCOPE_TEXT,
       state,
     });
 
@@ -118,7 +121,7 @@ export const startMelhorEnvioOAuth = createServerFn({ method: "POST" })
       authorization_url: `${oauthBaseFor(data.environment)}/oauth/authorize?${params.toString()}`,
       callback_url: urls.callback_url,
       webhook_url: urls.webhook_url,
-      scopes: OAUTH_SCOPES,
+      scopes: MELHOR_ENVIO_SCOPE_TEXT,
       state_expires_at: expiresAt,
     };
   });
