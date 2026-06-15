@@ -39,6 +39,26 @@ function Page() {
 
   const set = (k: string) => (e: any) => setForm({ ...form, [k]: e.target.value });
 
+  const onZipBlur = async () => {
+    const raw = (form.origin_zip ?? "").replace(/\D/g, "");
+    if (raw.length !== 8) return;
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
+      const j = await res.json();
+      if (j.erro) { toast.error("CEP não encontrado"); return; }
+      setForm((f: any) => ({
+        ...f,
+        origin_zip: raw,
+        origin_address: f.origin_address || j.logradouro || "",
+        origin_district: f.origin_district || j.bairro || "",
+        origin_city: f.origin_city || j.localidade || "",
+        origin_state: f.origin_state || j.uf || "",
+      }));
+    } catch { toast.error("Falha ao consultar CEP"); }
+  };
+
+  const addrComplete = !!(form.origin_zip && form.origin_address && form.origin_number && form.origin_district && form.origin_city && form.origin_state);
+
   return (
     <div className="min-h-0">
       
