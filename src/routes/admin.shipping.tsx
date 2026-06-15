@@ -1,14 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Header } from "@/components/marketplace/Header";
-import { Footer } from "@/components/marketplace/Footer";
-import { useAdminGuard } from "@/hooks/use-admin-guard";
+import { AdminShell } from "@/components/admin/AdminShell";
 import {
-  Truck, CheckCircle2, XCircle, Loader2, ArrowLeft, ArrowRight,
+  CheckCircle2, XCircle, Loader2, ArrowLeft, ArrowRight,
   KeyRound, ShieldCheck, Sparkles, RefreshCw,
 } from "lucide-react";
+
 import {
   getShippingDiagnostics,
   pingMelhorEnvio,
@@ -36,7 +35,6 @@ const STEPS = [
 ] as const;
 
 function AdminShippingWizard() {
-  const { checking, isAdmin } = useAdminGuard();
   const fetchDiag = useServerFn(getShippingDiagnostics);
   const ping = useServerFn(pingMelhorEnvio);
   const save = useServerFn(saveMelhorEnvioConfig);
@@ -46,8 +44,8 @@ function AdminShippingWizard() {
   const { data, isLoading } = useQuery({
     queryKey: ["me-config"],
     queryFn: () => fetchDiag(),
-    enabled: isAdmin,
   });
+
 
   const [step, setStep] = useState(0);
   const [reconfigure, setReconfigure] = useState(false);
@@ -115,21 +113,21 @@ function AdminShippingWizard() {
     } catch {}
   }
 
-  if (checking || isLoading) {
+  if (isLoading) {
     return (
       <Shell>
         <div className="py-20 text-center text-muted-foreground">Carregando…</div>
       </Shell>
     );
   }
-  if (!isAdmin) return null;
   if (!data) {
     return (
       <Shell>
-        <div className="py-20 text-center text-destructive">Sem acesso (somente admin).</div>
+        <div className="py-20 text-center text-destructive">Sem dados.</div>
       </Shell>
     );
   }
+
 
   // Configured summary screen
   if (alreadyConfigured) {
@@ -375,24 +373,12 @@ function AdminShippingWizard() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-        <Link to="/admin" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="h-4 w-4" /> Voltar ao admin
-        </Link>
-        <div className="mb-6">
-          <h1 className="text-3xl font-black flex items-center gap-2">
-            <Truck className="h-7 w-7 text-primary" /> Assistente Melhor Envio
-          </h1>
-          <p className="text-muted-foreground">Configuração guiada — passo a passo.</p>
-        </div>
-        {children}
-      </main>
-      <Footer />
-    </div>
+    <AdminShell title="Assistente Melhor Envio" description="Configuração guiada — passo a passo.">
+      <div className="max-w-4xl mx-auto">{children}</div>
+    </AdminShell>
   );
 }
+
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
