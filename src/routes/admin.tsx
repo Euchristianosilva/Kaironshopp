@@ -21,7 +21,7 @@ function formatBRL(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-const modules = [
+const modules: Array<{ to: string; label: string; desc: string; icon: any; accent: string; soon?: boolean }> = [
   { to: "/admin", label: "Dashboard", desc: "Visão geral", icon: BarChart3, accent: "from-blue-500 to-cyan-500" },
   { to: "/admin/finance", label: "Financeiro", desc: "Receita, comissões e relatórios", icon: DollarSign, accent: "from-emerald-500 to-teal-500" },
   { to: "/admin/shipping", label: "Frete (Melhor Envio)", desc: "Integração e testes", icon: Truck, accent: "from-amber-500 to-orange-500" },
