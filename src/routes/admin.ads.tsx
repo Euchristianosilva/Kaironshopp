@@ -1,15 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useAdminGuard } from "@/hooks/use-admin-guard";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { adminUpdateCampaignStatus, listAllAdCampaigns } from "@/lib/ads.functions";
-import { Header } from "@/components/marketplace/Header";
-import { Footer } from "@/components/marketplace/Footer";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Rocket, Pause, Ban, Play } from "lucide-react";
+import { Pause, Ban, Play } from "lucide-react";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/admin/ads")({
   head: () => ({ meta: [{ title: "Admin · Anúncios — MercaBrasil" }] }),
