@@ -255,6 +255,7 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
 
 export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioConfig, input: MelhorEnvioRequestInput) {
   let activeCfg = await refreshAccessTokenIfNeeded(supabaseAdmin, cfg);
+  const cfgForAuth = activeCfg ?? cfg;
   const env = activeCfg?.environment ?? "sandbox";
   const method = input.method ?? "GET";
   const requestContext = requestContextFor(activeCfg, env, input.endpoint);
@@ -293,11 +294,12 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
   }
 
   let attempt = await run(token);
-  if (attempt.res.status === 401 && activeCfg.refresh_token) {
-    const refreshed = await refreshAccessTokenIfNeeded(supabaseAdmin, activeCfg, true);
-    if (refreshed?.access_token && refreshed.access_token !== token) {
+  if (attempt.res.status === 401 && cfgForAuth.refresh_token) {
+    const refreshed = await refreshAccessTokenIfNeeded(supabaseAdmin, cfgForAuth, true);
+    const refreshedToken = refreshed?.access_token;
+    if (refreshedToken && refreshedToken !== token) {
       activeCfg = refreshed;
-      token = refreshed.access_token;
+      token = refreshedToken;
       attempt = await run(token);
     }
   }
@@ -308,7 +310,7 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
     const reason = attempt.res.status === 403
       ? "Token sem permissão para este endpoint ou ambiente incompatível. Reautorize com os escopos atualizados e confira Sandbox/Produção."
       : "Token inválido ou expirado. Reautorize o OAuth.";
-    reauth = await markMelhorEnvioRequiresOAuth(supabaseAdmin, activeCfg, reason, {
+    reauth = await markMelhorEnvioRequiresOAuth(supabaseAdmin, cfgForAuth, reason, {
       ok: false,
       env,
       endpoint: input.endpoint,
