@@ -297,7 +297,7 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
   if (attempt.res.status === 401 && cfgForAuth.refresh_token) {
     const refreshed = await refreshAccessTokenIfNeeded(supabaseAdmin, cfgForAuth, true);
     const refreshedToken = refreshed?.access_token;
-    if (refreshedToken && refreshedToken !== token) {
+    if (typeof refreshedToken === "string" && refreshedToken.length > 0 && refreshedToken !== token) {
       activeCfg = refreshed;
       token = refreshedToken;
       attempt = await run(token);
