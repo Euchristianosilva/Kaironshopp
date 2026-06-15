@@ -13,6 +13,7 @@ import {
   pingMelhorEnvio,
   saveMelhorEnvioConfig,
   startMelhorEnvioOAuth,
+  refreshMelhorEnvioToken,
 } from "@/lib/shipping-diag.functions";
 import { toast } from "sonner";
 
@@ -25,6 +26,7 @@ type Wizard = {
   environment: "sandbox" | "production";
   client_id: string;
   client_secret: string;
+  webhook_url: string;
 };
 
 const STEPS = [
@@ -39,6 +41,7 @@ function AdminShippingWizard() {
   const ping = useServerFn(pingMelhorEnvio);
   const save = useServerFn(saveMelhorEnvioConfig);
   const startOAuth = useServerFn(startMelhorEnvioOAuth);
+  const refreshToken = useServerFn(refreshMelhorEnvioToken);
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -53,6 +56,7 @@ function AdminShippingWizard() {
     environment: "sandbox",
     client_id: "",
     client_secret: "",
+    webhook_url: "",
   });
   const [oauthUrl, setOauthUrl] = useState<string | null>(null);
   const [callbackUrl, setCallbackUrl] = useState<string | null>(null);
@@ -71,6 +75,7 @@ function AdminShippingWizard() {
       ...p,
       environment: (data.config.environment as "sandbox" | "production") ?? "sandbox",
       client_id: data.config.client_id ?? "",
+      webhook_url: data.config.webhook_url ?? "",
     }));
   }, [data]);
 
