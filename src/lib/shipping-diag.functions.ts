@@ -252,7 +252,7 @@ export const pingMelhorEnvio = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: cfg } = await supabaseAdmin
+    let { data: cfg } = await supabaseAdmin
       .from("melhor_envio_config")
       .select("*")
       .eq("id", true)
