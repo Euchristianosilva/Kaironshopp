@@ -127,12 +127,12 @@ export const startMelhorEnvioOAuth = createServerFn({ method: "POST" })
 
 const SaveSchema = z.object({
   environment: z.enum(["sandbox", "production"]),
-  client_id: z.string().max(200).optional().nullable(),
+  client_id: z.string().trim().min(1, "Client ID obrigatório").max(200).optional().nullable(),
   client_secret: z.string().max(500).optional().nullable(),
   access_token: z.string().max(4000).optional().nullable(),
   refresh_token: z.string().max(4000).optional().nullable(),
   callback_url: z.string().max(500).optional().nullable(),
-  webhook_url: z.string().max(500).optional().nullable(),
+  webhook_url: z.string().trim().url("URL do webhook inválida").max(500).optional().nullable(),
 });
 
 export const saveMelhorEnvioConfig = createServerFn({ method: "POST" })
