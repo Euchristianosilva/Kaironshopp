@@ -58,9 +58,8 @@ export const getAdminOverview = createServerFn({ method: "POST" })
     return {
       users: usersRes.count ?? 0,
       sellers: sellersRes.count ?? 0,
-      sellersPending: sellersPendingRes.count ?? 0,
       products: productsRes.count ?? 0,
-      productsPending: productsPendingRes.count ?? 0,
+      productsInactive: productsInactiveRes.count ?? 0,
       ordersToday: ordersTodayRes.count ?? 0,
       ordersMonth: ordersMonthRes.count ?? 0,
       grossToday,
