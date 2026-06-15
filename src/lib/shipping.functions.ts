@@ -29,12 +29,12 @@ export const calculateShipping = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ quotes: Quote[] }> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    let { data: cfg } = await supabaseAdmin
+    const { data: cfgRow } = await supabaseAdmin
       .from("melhor_envio_config")
       .select("*")
       .eq("id", true)
       .maybeSingle();
-    cfg = await refreshAccessTokenIfNeeded(supabaseAdmin, cfg as any);
+    const cfg = await refreshAccessTokenIfNeeded(supabaseAdmin, cfgRow as any);
     const token = cfg?.access_token;
     const env = cfg?.environment ?? "sandbox";
     if (!token) throw new Error("Integração Melhor Envio não configurada pelo administrador.");
@@ -131,39 +131,24 @@ export const calculateShipping = createServerFn({ method: "POST" })
           products: meProducts,
         };
         try {
-          const res = await fetch(endpoint, {
+          const result = await melhorEnvioRequest(supabaseAdmin, cfg as any, {
+            endpoint,
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-              "User-Agent": "Kairon Shopp (suporte@kaironshopp.com.br)",
-            },
-            body: JSON.stringify(payload),
+            requestPayload: payload,
           });
-          if (!res.ok) {
-            const txt = await res.text();
+          if (!result.ok) {
+            const txt = result.text;
             console.error("[melhor-envio] calculate failed", {
-              status: res.status,
+              status: result.status,
               env,
               endpoint,
               payload,
               body: txt.slice(0, 500),
             });
-            await supabaseAdmin.from("shipping_diagnostics").upsert({
-              id: true,
-              last_error_at: new Date().toISOString(),
-              last_error_status: res.status,
-              last_error_endpoint: endpoint,
-              last_error_body: txt.slice(0, 1000),
-              last_request_payload: payload as never,
-              last_env: env,
-              updated_at: new Date().toISOString(),
-            });
             let friendly: string;
-            if (res.status === 401 || res.status === 403) {
-              friendly = "Cálculo de frete temporariamente indisponível. Nossa equipe foi notificada.";
-            } else if (res.status === 422) {
+            if (result.status === 401 || result.status === 403) {
+              friendly = "Integração de frete precisa ser reautorizada pelo administrador.";
+            } else if (result.status === 422) {
               friendly = "Não foi possível calcular o frete para este endereço.";
             } else {
               friendly = "Frete temporariamente indisponível. Tente novamente.";
@@ -177,7 +162,7 @@ export const calculateShipping = createServerFn({ method: "POST" })
             });
             continue;
           }
-          const raw = (await res.json()) as Array<{
+          const raw = (Array.isArray(result.json) ? result.json : []) as Array<{
             id: number;
             name: string;
             price?: string;
