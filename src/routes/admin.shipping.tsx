@@ -153,10 +153,11 @@ function AdminShippingWizard() {
     return (
       <Shell>
         <div className="bg-card border border-border rounded-xl p-8 max-w-2xl mx-auto text-center">
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-success/15 text-success mb-4">
-            <CheckCircle2 className="h-8 w-8" />
+          <div className={`inline-flex items-center gap-2 px-3 h-8 rounded-full text-sm font-bold mb-4 ${cfg?.token_expired ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success"}`}>
+            <span className="text-base leading-none">{cfg?.token_expired ? "🔴" : "🟢"}</span>
+            {cfg?.token_expired ? "Desconectado" : "Conectado"}
           </div>
-          <h2 className="text-2xl font-black mb-1">Integração ativa</h2>
+          <h2 className="text-2xl font-black mb-1">Integração Melhor Envio</h2>
           <p className="text-muted-foreground mb-6">
             Ambiente <strong>{cfg?.environment}</strong> · Token {cfg?.access_token_preview}
           </p>
@@ -168,6 +169,7 @@ function AdminShippingWizard() {
             <InfoRow label="Último sucesso" value={diag?.last_success_at ? new Date(diag.last_success_at).toLocaleString("pt-BR") : "—"} />
             <InfoRow label="Último erro" value={diag?.last_error_at ? `${diag.last_error_status ?? "?"} · ${new Date(diag.last_error_at).toLocaleString("pt-BR")}` : "—"} />
             <InfoRow label="Endpoint" value={data.base_url} />
+            <div className="sm:col-span-2"><InfoRow label="Webhook URL" value={cfg?.webhook_url || "—"} /></div>
           </div>
 
           {pingRes && (
@@ -184,6 +186,14 @@ function AdminShippingWizard() {
             >
               {pingMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
               Testar conexão
+            </button>
+            <button
+              onClick={() => refreshMut.mutate()}
+              disabled={refreshMut.isPending}
+              className="inline-flex items-center gap-2 px-4 h-10 rounded-md bg-secondary hover:bg-secondary/70 font-semibold disabled:opacity-60"
+            >
+              {refreshMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Atualizar Token
             </button>
             <button
               onClick={() => { setReconfigure(true); setStep(0); }}
