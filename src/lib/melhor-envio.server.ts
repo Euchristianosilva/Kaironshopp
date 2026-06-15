@@ -19,6 +19,7 @@ type DiagnosticInput = {
   responseBody?: string | null;
   requestPayload?: unknown;
   requestHeaders?: Record<string, string>;
+  requestContext?: Record<string, unknown>;
   reauthRequired?: boolean;
   reauthReason?: string | null;
   reauthUrl?: string | null;
@@ -58,7 +59,23 @@ function redactSensitiveProviderBody(text: string) {
 }
 
 function responseForStorage(text: string) {
-  return redactSensitiveProviderBody(text).slice(0, 12000);
+  return redactSensitiveProviderBody(text);
+}
+
+function mask(value: string | null | undefined) {
+  if (!value) return null;
+  if (value.length <= 6) return "••••";
+  return `${value.slice(0, 3)}…${value.slice(-2)}`;
+}
+
+function requestContextFor(cfg: MelhorEnvioConfig | null | undefined, env: string, endpoint: string) {
+  return {
+    http_endpoint: endpoint,
+    environment: env === "production" ? "Production" : "Sandbox",
+    oauth_scopes: MELHOR_ENVIO_SCOPE_TEXT,
+    redirect_uri: cfg?.callback_url ?? null,
+    client_id_masked: mask(cfg?.client_id),
+  };
 }
 
 export async function recordMelhorEnvioDiagnostic(supabaseAdmin: any, input: DiagnosticInput) {
@@ -79,6 +96,7 @@ export async function recordMelhorEnvioDiagnostic(supabaseAdmin: any, input: Dia
 
   if (input.requestPayload !== undefined) patch.last_request_payload = input.requestPayload;
   if (input.requestHeaders !== undefined) patch.last_request_headers = input.requestHeaders;
+  if (input.requestContext !== undefined) patch.last_request_context = input.requestContext;
 
   if (input.ok) {
     patch.last_success_at = now;
