@@ -150,10 +150,12 @@ export async function markMelhorEnvioRequiresOAuth(
   const stateExpiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   const reauthUrl = buildAuthorizationUrl(cfg, state);
 
+  // IMPORTANT: do NOT null access_token / refresh_token / token_expires_at here.
+  // Wiping them on every 401/403 destroys persisted integration state, which
+  // forces the admin wizard back to Step 1 on the next reload. Only rotate the
+  // OAuth state nonce so a fresh reauthorization can succeed if the admin
+  // explicitly clicks "Reautorizar OAuth".
   await supabaseAdmin.from("melhor_envio_config").update({
-    access_token: null,
-    refresh_token: null,
-    token_expires_at: null,
     oauth_state: reauthUrl ? state : null,
     oauth_state_expires_at: reauthUrl ? stateExpiresAt : null,
     oauth_scopes: MELHOR_ENVIO_SCOPE_TEXT,
