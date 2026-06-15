@@ -196,69 +196,44 @@ export const pingMelhorEnvio = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    let { data: cfg } = await supabaseAdmin
+    const { data: cfg } = await supabaseAdmin
       .from("melhor_envio_config")
       .select("*")
       .eq("id", true)
       .maybeSingle();
 
-    cfg = await refreshAccessTokenIfNeeded(supabaseAdmin, cfg as any);
-
     const env = cfg?.environment ?? "sandbox";
     const base = meBaseFor(env);
     const endpoint = `${base}/me`;
-    const token = cfg?.access_token;
 
-    if (!token) {
+    if (!cfg?.access_token) {
       return {
         ok: false,
         status: 0,
         env,
         endpoint,
-        error: "Access Token não configurado. Preencha o formulário ao lado.",
+        error: "Access Token não configurado. Reautorize o OAuth.",
+        reauth_url: null,
+        reauth_reason: "Access Token não configurado.",
       };
     }
 
     try {
-      const res = await fetch(endpoint, {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-          "User-Agent": "Kairon Shopp (suporte@kaironshopp.com.br)",
-        },
-      });
-      const text = await res.text();
-      let parsed: any = null;
-      try { parsed = JSON.parse(text); } catch {}
-
-      if (res.ok) {
-        await supabaseAdmin.from("shipping_diagnostics").upsert({
-          id: true,
-          last_success_at: new Date().toISOString(),
-          last_env: env,
-          updated_at: new Date().toISOString(),
-        });
-      } else {
-        await supabaseAdmin.from("shipping_diagnostics").upsert({
-          id: true,
-          last_error_at: new Date().toISOString(),
-          last_error_status: res.status,
-          last_error_endpoint: endpoint,
-          last_error_body: text.slice(0, 1000),
-          last_env: env,
-          updated_at: new Date().toISOString(),
-        });
-      }
+      const result = await melhorEnvioRequest(supabaseAdmin, cfg as any, { endpoint, method: "GET" });
+      const parsed: any = result.json;
 
       return {
-        ok: res.ok,
-        status: res.status,
+        ok: result.ok,
+        status: result.status,
         env,
         endpoint,
         user: parsed && (parsed.email || parsed.name)
           ? { email: parsed.email, name: parsed.name }
           : null,
-        body: res.ok ? null : text.slice(0, 500),
+        body: result.ok ? null : result.text.slice(0, 500),
+        error: result.reauth_reason ?? undefined,
+        reauth_url: result.reauth_url,
+        reauth_reason: result.reauth_reason,
       };
     } catch (e) {
       return {
