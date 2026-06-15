@@ -43,10 +43,12 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
-      if (s?.user) setTimeout(() => refetchRole(), 0);
+      if (s?.user && (event === "SIGNED_IN" || event === "USER_UPDATED")) {
+        setTimeout(() => refetchRole(), 0);
+      }
     });
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
@@ -60,11 +62,11 @@ export function useAuth() {
     session,
     user,
     loading,
-    role: (access?.role ?? null) as AppRole | null,
-    roles: access?.roles ?? [],
-    isAdmin: access?.role === "admin",
-    isSeller: access?.role === "seller",
-    isCustomer: access?.role === "customer",
+    role: (user ? access?.role ?? null : null) as AppRole | null,
+    roles: user ? access?.roles ?? [] : [],
+    isAdmin: !!user && access?.role === "admin",
+    isSeller: !!user && access?.role === "seller",
+    isCustomer: !!user && access?.role === "customer",
     roleLoading: !!user && (loading || roleLoading),
     signOut: () => supabase.auth.signOut(),
   };
