@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 import { getPlatformSettings, updatePlatformSettings } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin/settings")({
@@ -49,7 +50,13 @@ function Page() {
     <AdminShell title="Configurações do sistema" description="Identidade, SEO e taxas da plataforma.">
       <div className="max-w-2xl bg-card border border-border rounded-xl p-5 space-y-3">
         <Field label="Nome da plataforma"><input value={form.platform_name} onChange={(e) => setForm({ ...form, platform_name: e.target.value })} className="i" /></Field>
-        <Field label="URL do logo"><input value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} placeholder="https://..." className="i" /></Field>
+        <ImageUploader
+          value={form.logo_url}
+          onChange={(url) => setForm({ ...form, logo_url: url })}
+          folder="branding"
+          label="Logo da plataforma"
+          aspect="aspect-[3/1]"
+        />
         <Field label="E-mail de suporte"><input type="email" value={form.support_email} onChange={(e) => setForm({ ...form, support_email: e.target.value })} className="i" /></Field>
         <Field label="Comissão da plataforma (%)"><input type="number" step="0.1" min={0} max={100} value={form.commission_percent} onChange={(e) => setForm({ ...form, commission_percent: Number(e.target.value) })} className="i" /></Field>
         <Field label="SEO — Título"><input value={form.seo_title} onChange={(e) => setForm({ ...form, seo_title: e.target.value })} className="i" /></Field>
@@ -69,3 +76,4 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
