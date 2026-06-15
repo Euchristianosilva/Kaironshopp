@@ -274,26 +274,34 @@ function AdminShippingWizard() {
         {step === 2 && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Gere um <strong>Access Token</strong> com os escopos:
+              Agora a plataforma abre o Melhor Envio para autorização oficial OAuth 2.0. O <strong>Access Token</strong> e o <strong>Refresh Token</strong> serão gerados automaticamente após a aprovação.
               <code className="block mt-1 text-[10px] bg-secondary rounded p-2">shipping-calculate shipping-tracking cart-read cart-write</code>
             </p>
-            <Field label="Access Token">
-              <textarea
-                autoFocus
-                className="input min-h-[100px] font-mono text-xs"
-                value={form.access_token}
-                onChange={(e) => setForm({ ...form, access_token: e.target.value })}
-                placeholder="Cole o Access Token (JWT)"
-              />
-            </Field>
-            <Field label="Refresh Token (opcional)">
-              <textarea
-                className="input min-h-[70px] font-mono text-xs"
-                value={form.refresh_token}
-                onChange={(e) => setForm({ ...form, refresh_token: e.target.value })}
-                placeholder="Cole o Refresh Token, se houver"
-              />
-            </Field>
+            <button
+              type="button"
+              onClick={() => oauthMut.mutate()}
+              disabled={oauthMut.isPending || !form.client_id || !form.client_secret}
+              className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-primary text-primary-foreground font-semibold hover:bg-primary/90 disabled:opacity-50"
+            >
+              {oauthMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+              Gerar link de autorização
+            </button>
+
+            {callbackUrl && (
+              <div className="rounded-lg bg-secondary/40 p-4 text-sm space-y-2">
+                <InfoRow label="Callback URL" value={callbackUrl} />
+                <p className="text-xs text-muted-foreground">Use esta URL no cadastro da aplicação Melhor Envio se o painel solicitar uma URL de redirecionamento.</p>
+              </div>
+            )}
+
+            {oauthUrl && (
+              <a
+                href={oauthUrl}
+                className="inline-flex items-center gap-2 px-5 h-11 rounded-md bg-success text-white font-semibold hover:opacity-90"
+              >
+                <ArrowRight className="h-4 w-4" /> Autorizar no Melhor Envio
+              </a>
+            )}
           </div>
         )}
 
@@ -306,8 +314,8 @@ function AdminShippingWizard() {
               <InfoRow label="Ambiente" value={form.environment} />
               <InfoRow label="Client ID" value={form.client_id || "—"} />
               <InfoRow label="Client Secret" value={form.client_secret ? "••••••" : "—"} />
-              <InfoRow label="Access Token" value={form.access_token ? `${form.access_token.slice(0, 8)}…${form.access_token.slice(-6)}` : "—"} />
-              <InfoRow label="Refresh Token" value={form.refresh_token ? "informado" : "—"} />
+              <InfoRow label="Access Token" value={cfg?.access_token_preview ? `gerado (${cfg.access_token_preview})` : "será gerado pelo OAuth"} />
+              <InfoRow label="Refresh Token" value={cfg?.refresh_token_preview ? "gerado automaticamente" : "opcional; depende do OAuth retornado"} />
             </div>
 
             {pingMut.data && (
