@@ -160,8 +160,11 @@ export const saveMelhorEnvioConfig = createServerFn({ method: "POST" })
     patch.callback_url = data.callback_url !== undefined ? data.callback_url : current?.callback_url ?? null;
     patch.webhook_url = data.webhook_url !== undefined ? data.webhook_url : current?.webhook_url ?? null;
     patch.client_secret = data.client_secret ? data.client_secret : current?.client_secret ?? null;
-    patch.access_token = data.access_token ? data.access_token : current?.access_token ?? null;
-    patch.refresh_token = data.refresh_token ? data.refresh_token : current?.refresh_token ?? null;
+    patch.oauth_scopes = MELHOR_ENVIO_SCOPE_TEXT;
+    const environmentChanged = current?.environment && current.environment !== data.environment;
+    patch.access_token = environmentChanged ? null : data.access_token ? data.access_token : current?.access_token ?? null;
+    patch.refresh_token = environmentChanged ? null : data.refresh_token ? data.refresh_token : current?.refresh_token ?? null;
+    patch.token_expires_at = environmentChanged ? null : current?.token_expires_at ?? null;
 
     const { error } = await supabaseAdmin
       .from("melhor_envio_config")
