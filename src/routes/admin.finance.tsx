@@ -1,14 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Header } from "@/components/marketplace/Header";
-import { Footer } from "@/components/marketplace/Footer";
-import { useAdminGuard } from "@/hooks/use-admin-guard";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { getAdminFinance, updateCommission } from "@/lib/finance.functions";
 import { formatBRL } from "@/lib/mock-data";
 import { toast } from "sonner";
 import { DollarSign, TrendingUp, Users, Percent } from "lucide-react";
+
 
 export const Route = createFileRoute("/admin/finance")({
   head: () => ({ meta: [{ title: "Financeiro Master — MercaBrasil" }] }),
