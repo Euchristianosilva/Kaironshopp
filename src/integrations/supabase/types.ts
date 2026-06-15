@@ -422,6 +422,7 @@ export type Database = {
           environment: string
           id: boolean
           last_sync_at: string | null
+          oauth_scopes: string | null
           oauth_state: string | null
           oauth_state_expires_at: string | null
           refresh_token: string | null
@@ -438,6 +439,7 @@ export type Database = {
           environment?: string
           id?: boolean
           last_sync_at?: string | null
+          oauth_scopes?: string | null
           oauth_state?: string | null
           oauth_state_expires_at?: string | null
           refresh_token?: string | null
@@ -454,6 +456,7 @@ export type Database = {
           environment?: string
           id?: boolean
           last_sync_at?: string | null
+          oauth_scopes?: string | null
           oauth_state?: string | null
           oauth_state_expires_at?: string | null
           refresh_token?: string | null
@@ -1273,8 +1276,14 @@ export type Database = {
           last_error_body: string | null
           last_error_endpoint: string | null
           last_error_status: number | null
+          last_request_method: string | null
           last_request_payload: Json | null
+          last_response_body: string | null
           last_success_at: string | null
+          reauth_reason: string | null
+          reauth_required: boolean
+          reauth_url: string | null
+          requested_scopes: string | null
           updated_at: string
         }
         Insert: {
@@ -1284,8 +1293,14 @@ export type Database = {
           last_error_body?: string | null
           last_error_endpoint?: string | null
           last_error_status?: number | null
+          last_request_method?: string | null
           last_request_payload?: Json | null
+          last_response_body?: string | null
           last_success_at?: string | null
+          reauth_reason?: string | null
+          reauth_required?: boolean
+          reauth_url?: string | null
+          requested_scopes?: string | null
           updated_at?: string
         }
         Update: {
@@ -1295,8 +1310,14 @@ export type Database = {
           last_error_body?: string | null
           last_error_endpoint?: string | null
           last_error_status?: number | null
+          last_request_method?: string | null
           last_request_payload?: Json | null
+          last_response_body?: string | null
           last_success_at?: string | null
+          reauth_reason?: string | null
+          reauth_required?: boolean
+          reauth_url?: string | null
+          requested_scopes?: string | null
           updated_at?: string
         }
         Relationships: []
