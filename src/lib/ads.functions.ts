@@ -256,3 +256,79 @@ export const adminUpdateCampaignStatus = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
+const MANUAL_PLACEMENTS = [
+  "banner_principal",
+  "destaque_home",
+  "patrocinado",
+  "vitrine_topo",
+  "categoria",
+  "busca",
+  "premium",
+  "card",
+  "carousel",
+] as const;
+type ManualPlacement = (typeof MANUAL_PLACEMENTS)[number];
+
+/**
+ * Admin: ativa um anúncio manualmente (sem pagamento). Cria a campanha
+ * já com status=active, registra autor e timestamp.
+ */
+export const createManualAdCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: {
+    productId: string;
+    placement: ManualPlacement;
+    startsAt?: string;
+    endsAt?: string;
+    priority?: number;
+  }) => {
+    if (!input.productId) throw new Error("productId obrigatório");
+    if (!MANUAL_PLACEMENTS.includes(input.placement)) throw new Error("Posição inválida");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const email = (context.claims as any)?.email as string | undefined;
+    const { assertAdminAccess } = await import("@/lib/admin-auth.server");
+    await assertAdminAccess(context.userId, email);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: product, error: pErr } = await supabaseAdmin
+      .from("products")
+      .select("id, seller_id, sellers!inner(id, owner_id)")
+      .eq("id", data.productId)
+      .maybeSingle();
+    if (pErr) throw pErr;
+    if (!product) throw new Error("Produto não encontrado");
+
+    const starts = data.startsAt ? new Date(data.startsAt) : new Date();
+    const ends = data.endsAt ? new Date(data.endsAt) : new Date(starts.getTime() + 7 * 24 * 60 * 60 * 1000);
+    if (ends <= starts) throw new Error("Data final deve ser após a inicial");
+
+    const seller = (product as any).sellers;
+    const now = new Date().toISOString();
+    const { data: campaign, error: cErr } = await supabaseAdmin
+      .from("ad_campaigns")
+      .insert({
+        product_id: product.id,
+        seller_id: seller.id,
+        owner_id: seller.owner_id,
+        placement: data.placement,
+        starts_at: starts.toISOString(),
+        ends_at: ends.toISOString(),
+        amount_cents: 0,
+        currency: "brl",
+        status: "active",
+        priority: data.priority ?? 100,
+        paid_at: now,
+        is_manual: true,
+        activated_by: context.userId,
+        activated_at: now,
+        metadata: { manual: true, activated_by_email: email ?? null },
+      })
+      .select("id")
+      .single();
+    if (cErr) throw cErr;
+    return { ok: true, campaignId: campaign.id };
+  });
+

@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 import { listBanners, upsertBanner, deleteBanner } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin/banners")({
@@ -21,6 +22,8 @@ function Page() {
   const reset = () => setForm({ id: "", title: "", subtitle: "", image_url: "", link_url: "", position: 0, is_active: true });
 
   const submit = async () => {
+    if (!form.image_url) { toast.error("Envie uma imagem para o banner."); return; }
+    if (!form.title.trim()) { toast.error("Informe um título."); return; }
     try {
       await save({ data: { id: form.id || undefined, title: form.title, subtitle: form.subtitle || null, image_url: form.image_url, link_url: form.link_url || null, position: Number(form.position) || 0, is_active: form.is_active } });
       toast.success("Salvo"); reset(); qc.invalidateQueries({ queryKey: ["admin-banners"] });
@@ -55,12 +58,17 @@ function Page() {
             </div>
           ))}
         </div>
-        <div className="bg-card border border-border rounded-xl p-4 h-fit space-y-2">
-          <h3 className="font-bold mb-2">{form.id ? "Editar banner" : "Novo banner"}</h3>
+        <div className="bg-card border border-border rounded-xl p-4 h-fit space-y-3">
+          <h3 className="font-bold">{form.id ? "Editar banner" : "Novo banner"}</h3>
+          <ImageUploader
+            value={form.image_url}
+            onChange={(url) => setForm({ ...form, image_url: url })}
+            folder="banners"
+            label="Imagem do banner"
+          />
           <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Título" className="h-10 w-full px-3 rounded-md border border-border bg-background text-sm" />
           <input value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} placeholder="Subtítulo (opcional)" className="h-10 w-full px-3 rounded-md border border-border bg-background text-sm" />
-          <input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="URL da imagem (https://...)" className="h-10 w-full px-3 rounded-md border border-border bg-background text-sm" />
-          <input value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} placeholder="URL de destino (opcional)" className="h-10 w-full px-3 rounded-md border border-border bg-background text-sm" />
+          <input value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} placeholder="Link de destino (opcional)" className="h-10 w-full px-3 rounded-md border border-border bg-background text-sm" />
           <input type="number" value={form.position} onChange={(e) => setForm({ ...form, position: Number(e.target.value) })} placeholder="Posição" className="h-10 w-full px-3 rounded-md border border-border bg-background text-sm" />
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} /> Ativo</label>
           <div className="flex gap-2 pt-2">
@@ -72,3 +80,4 @@ function Page() {
     </AdminShell>
   );
 }
+
