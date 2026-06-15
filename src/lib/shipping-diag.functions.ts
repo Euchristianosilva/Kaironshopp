@@ -76,7 +76,7 @@ const OAuthStartSchema = z.object({
   environment: z.enum(["sandbox", "production"]),
   client_id: z.string().min(1).max(200),
   client_secret: z.string().min(1).max(500),
-  webhook_url: z.string().trim().url("URL do webhook inválida").max(500).optional().nullable(),
+  webhook_url: z.preprocess((v) => v === "" ? null : v, z.string().trim().url("URL do webhook inválida").max(500).optional().nullable()),
   origin: z.string().url(),
 });
 
@@ -134,7 +134,7 @@ const SaveSchema = z.object({
   access_token: z.string().max(4000).optional().nullable(),
   refresh_token: z.string().max(4000).optional().nullable(),
   callback_url: z.string().max(500).optional().nullable(),
-  webhook_url: z.string().trim().url("URL do webhook inválida").max(500).optional().nullable(),
+  webhook_url: z.preprocess((v) => v === "" ? null : v, z.string().trim().url("URL do webhook inválida").max(500).optional().nullable()),
 });
 
 export const saveMelhorEnvioConfig = createServerFn({ method: "POST" })
