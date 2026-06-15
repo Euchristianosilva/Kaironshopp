@@ -68,7 +68,7 @@ export const getShippingDiagnostics = createServerFn({ method: "GET" })
         scopes: MELHOR_ENVIO_SCOPE_TEXT,
         endpoints: MELHOR_ENVIO_ENDPOINT_AUDIT,
       },
-      diagnostics: diag ?? null,
+      diagnostics: (diag as any) ?? null,
     };
   });
 
