@@ -76,6 +76,7 @@ const OAuthStartSchema = z.object({
   environment: z.enum(["sandbox", "production"]),
   client_id: z.string().min(1).max(200),
   client_secret: z.string().min(1).max(500),
+  webhook_url: z.string().trim().url("URL do webhook inválida").max(500).optional().nullable(),
   origin: z.string().url(),
 });
 
@@ -87,6 +88,7 @@ export const startMelhorEnvioOAuth = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const urls = integrationUrls(data.origin);
+    const webhookUrl = data.webhook_url || urls.webhook_url;
     const state = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
@@ -96,7 +98,7 @@ export const startMelhorEnvioOAuth = createServerFn({ method: "POST" })
       client_id: data.client_id,
       client_secret: data.client_secret,
       callback_url: urls.callback_url,
-      webhook_url: urls.webhook_url,
+      webhook_url: webhookUrl,
       access_token: null,
       refresh_token: null,
       token_expires_at: null,
@@ -119,7 +121,7 @@ export const startMelhorEnvioOAuth = createServerFn({ method: "POST" })
     return {
       authorization_url: `${oauthBaseFor(data.environment)}/oauth/authorize?${params.toString()}`,
       callback_url: urls.callback_url,
-      webhook_url: urls.webhook_url,
+      webhook_url: webhookUrl,
       scopes: MELHOR_ENVIO_SCOPE_TEXT,
       state_expires_at: expiresAt,
     };
