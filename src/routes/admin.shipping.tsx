@@ -166,6 +166,7 @@ function AdminShippingWizard() {
 
           <div className="grid sm:grid-cols-2 gap-3 text-sm text-left mb-6">
             <InfoRow label="Status do token" value={cfg?.token_expired ? "Expirado" : "Ativo"} />
+            <InfoRow label="Ambiente ativo" value={cfg?.environment === "production" ? "Production" : "Sandbox"} />
             <InfoRow label="Última sincronização" value={cfg?.last_sync_at ? new Date(cfg.last_sync_at).toLocaleString("pt-BR") : "—"} />
             <InfoRow label="Última atualização" value={cfg?.updated_at ? new Date(cfg.updated_at).toLocaleString("pt-BR") : "—"} />
             <InfoRow label="Último sucesso" value={diag?.last_success_at ? new Date(diag.last_success_at).toLocaleString("pt-BR") : "—"} />
@@ -173,10 +174,23 @@ function AdminShippingWizard() {
             <InfoRow label="Método" value={diag?.last_request_method ?? "—"} />
             <InfoRow label="Status HTTP" value={diag?.last_error_status ?? "—"} />
             <InfoRow label="Endpoint base" value={data.base_url} />
+            <div className="sm:col-span-2"><InfoRow label="OAuth obter token" value={data.endpoints.oauth_token} /></div>
+            <div className="sm:col-span-2"><InfoRow label="OAuth refresh_token" value={data.endpoints.oauth_refresh_token} /></div>
+            <div className="sm:col-span-2"><InfoRow label="Teste de conexão" value={data.endpoints.connection_test} /></div>
+            <div className="sm:col-span-2"><InfoRow label="URL completa atual" value={diag?.last_error_endpoint ?? data.endpoints.current_full_url} /></div>
             <div className="sm:col-span-2"><InfoRow label="Última URL chamada" value={diag?.last_error_endpoint ?? "—"} /></div>
             <div className="sm:col-span-2"><InfoRow label="Escopos OAuth" value={cfg?.oauth_scopes || data.oauth.scopes} /></div>
             <div className="sm:col-span-2"><InfoRow label="Webhook URL" value={cfg?.webhook_url || "—"} /></div>
           </div>
+
+          <details className="text-left text-xs rounded-md bg-secondary/40 p-3 mb-4" open>
+            <summary className="cursor-pointer font-semibold">Headers enviados nas requisições</summary>
+            <pre className="mt-2 whitespace-pre-wrap break-words max-h-56 overflow-auto">{JSON.stringify({
+              oauth_token: data.request_headers.oauth_token,
+              oauth_refresh_token: data.request_headers.oauth_refresh_token,
+              connection_test: diag?.last_request_headers ?? data.request_headers.connection_test,
+            }, null, 2)}</pre>
+          </details>
 
           {diag?.last_response_body && (
             <details className="text-left text-xs rounded-md bg-secondary/40 p-3 mb-4">

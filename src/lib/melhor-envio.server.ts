@@ -1,4 +1,4 @@
-import { MELHOR_ENVIO_SCOPE_TEXT, oauthBaseFor } from "@/lib/melhor-envio.shared";
+import { MELHOR_ENVIO_SCOPE_TEXT, MELHOR_ENVIO_USER_AGENT, oauthBaseFor } from "@/lib/melhor-envio.shared";
 
 type MelhorEnvioConfig = {
   environment?: string | null;
@@ -18,6 +18,7 @@ type DiagnosticInput = {
   status: number;
   responseBody?: string | null;
   requestPayload?: unknown;
+  requestHeaders?: Record<string, string>;
   reauthRequired?: boolean;
   reauthReason?: string | null;
   reauthUrl?: string | null;
@@ -77,6 +78,7 @@ export async function recordMelhorEnvioDiagnostic(supabaseAdmin: any, input: Dia
   };
 
   if (input.requestPayload !== undefined) patch.last_request_payload = input.requestPayload;
+  if (input.requestHeaders !== undefined) patch.last_request_headers = input.requestHeaders;
 
   if (input.ok) {
     patch.last_success_at = now;
@@ -145,15 +147,16 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
   const env = cfg.environment ?? "sandbox";
   const endpoint = `${oauthBaseFor(env)}/oauth/token`;
   const method = "POST";
+  const requestHeaders = {
+    Accept: "application/json",
+    "Content-Type": "application/x-www-form-urlencoded",
+    "User-Agent": MELHOR_ENVIO_USER_AGENT,
+  };
 
   try {
     const res = await fetch(endpoint, {
       method,
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Kairon Shopp (suporte@kaironshopp.com.br)",
-      },
+      headers: requestHeaders,
       body: new URLSearchParams({
         grant_type: "refresh_token",
         client_id: cfg.client_id,
@@ -174,6 +177,7 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
           method,
           status: res.status,
           responseBody: text,
+          requestHeaders,
         });
       } else {
         await recordMelhorEnvioDiagnostic(supabaseAdmin, {
@@ -183,6 +187,7 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
           method,
           status: res.status,
           responseBody: text,
+          requestHeaders,
         });
       }
       return cfg;
@@ -204,6 +209,7 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
       method,
       status: res.status,
       responseBody: text,
+      requestHeaders,
     });
     return { ...cfg, ...patch };
   } catch (e) {
@@ -214,6 +220,7 @@ export async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: Melhor
       method,
       status: 0,
       responseBody: e instanceof Error ? e.message : String(e),
+      requestHeaders,
     });
     return cfg;
   }
@@ -223,6 +230,12 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
   let activeCfg = await refreshAccessTokenIfNeeded(supabaseAdmin, cfg);
   const env = activeCfg?.environment ?? "sandbox";
   const method = input.method ?? "GET";
+  const requestHeaders = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    Authorization: "Bearer [masked]",
+    "User-Agent": MELHOR_ENVIO_USER_AGENT,
+  };
   const run = async (token: string) => {
     const res = await fetch(input.endpoint, {
       method,
@@ -230,7 +243,7 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
         Accept: "application/json",
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
-        "User-Agent": "Kairon Shopp (suporte@kaironshopp.com.br)",
+        "User-Agent": MELHOR_ENVIO_USER_AGENT,
       },
       body: input.requestPayload === undefined ? undefined : JSON.stringify(input.requestPayload),
     });
@@ -273,6 +286,7 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
       status: attempt.res.status,
       responseBody: attempt.text,
       requestPayload: input.requestPayload,
+      requestHeaders,
     });
   } else {
     await recordMelhorEnvioDiagnostic(supabaseAdmin, {
@@ -283,6 +297,7 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
       status: attempt.res.status,
       responseBody: attempt.text,
       requestPayload: input.requestPayload,
+      requestHeaders,
     });
   }
 
