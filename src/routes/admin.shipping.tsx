@@ -373,24 +373,12 @@ function AdminShippingWizard() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-        <Link to="/admin" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="h-4 w-4" /> Voltar ao admin
-        </Link>
-        <div className="mb-6">
-          <h1 className="text-3xl font-black flex items-center gap-2">
-            <Truck className="h-7 w-7 text-primary" /> Assistente Melhor Envio
-          </h1>
-          <p className="text-muted-foreground">Configuração guiada — passo a passo.</p>
-        </div>
-        {children}
-      </main>
-      <Footer />
-    </div>
+    <AdminShell title="Assistente Melhor Envio" description="Configuração guiada — passo a passo.">
+      <div className="max-w-4xl mx-auto">{children}</div>
+    </AdminShell>
   );
 }
+
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
