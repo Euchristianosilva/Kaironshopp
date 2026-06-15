@@ -78,6 +78,10 @@ function requestContextFor(cfg: MelhorEnvioConfig | null | undefined, env: strin
   };
 }
 
+function configuredAccessToken(cfg: MelhorEnvioConfig | null | undefined) {
+  return cfg?.access_token || process.env.MELHOR_ENVIO_ACCESS_TOKEN || process.env.MELHOR_ENVIO_TOKEN || null;
+}
+
 export async function recordMelhorEnvioDiagnostic(supabaseAdmin: any, input: DiagnosticInput) {
   const now = new Date().toISOString();
   const patch: Record<string, unknown> = {
@@ -275,7 +279,8 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
     return { res, text, json: safeJson(text) };
   };
 
-  if (!activeCfg?.access_token) {
+  let token = configuredAccessToken(activeCfg);
+  if (!token) {
     return {
       ok: false,
       status: 0,
@@ -287,12 +292,13 @@ export async function melhorEnvioRequest(supabaseAdmin: any, cfg: MelhorEnvioCon
     };
   }
 
-  let attempt = await run(activeCfg.access_token);
+  let attempt = await run(token);
   if (attempt.res.status === 401 && activeCfg.refresh_token) {
     const refreshed = await refreshAccessTokenIfNeeded(supabaseAdmin, activeCfg, true);
-    if (refreshed?.access_token && refreshed.access_token !== activeCfg.access_token) {
+    if (refreshed?.access_token && refreshed.access_token !== token) {
       activeCfg = refreshed;
-      attempt = await run(activeCfg.access_token);
+      token = refreshed.access_token;
+      attempt = await run(token);
     }
   }
 
