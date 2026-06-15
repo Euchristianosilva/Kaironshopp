@@ -186,9 +186,14 @@ export const refreshMelhorEnvioToken = createServerFn({ method: "POST" })
     // Force refresh by zeroing expiry
     const updated = await refreshAccessTokenIfNeeded(supabaseAdmin, { ...(cfg as any), token_expires_at: new Date(0).toISOString() });
     const ok = (updated as any)?.access_token && (updated as any)?.access_token !== (cfg as any)?.access_token;
+    const { data: diag } = ok ? { data: null } : await supabaseAdmin
+      .from("shipping_diagnostics")
+      .select("reauth_url")
+      .eq("id", true)
+      .maybeSingle();
     return ok
       ? { ok: true, token_expires_at: (updated as any).token_expires_at, reauth_url: null }
-      : { ok: false, error: "Falha ao atualizar o token. Verifique credenciais.", reauth_url: null };
+      : { ok: false, error: "Falha ao atualizar o token. Verifique credenciais.", reauth_url: (diag as any)?.reauth_url ?? null };
   });
 
 export const pingMelhorEnvio = createServerFn({ method: "POST" })
