@@ -84,13 +84,14 @@ function configuredAccessToken(cfg: MelhorEnvioConfig | null | undefined) {
 
 export async function recordMelhorEnvioDiagnostic(supabaseAdmin: any, input: DiagnosticInput) {
   const now = new Date().toISOString();
+  const responseBody = responseForStorage(input.responseBody ?? "");
   const patch: Record<string, unknown> = {
     id: true,
     last_env: input.env,
     last_error_endpoint: input.endpoint,
     last_request_method: input.method,
     last_error_status: input.status,
-    last_response_body: responseForStorage(input.responseBody ?? ""),
+    last_response_body: responseBody,
     requested_scopes: MELHOR_ENVIO_SCOPE_TEXT,
     reauth_required: Boolean(input.reauthRequired),
     reauth_reason: input.reauthReason ?? null,
@@ -108,8 +109,20 @@ export async function recordMelhorEnvioDiagnostic(supabaseAdmin: any, input: Dia
     patch.last_error_body = null;
   } else {
     patch.last_error_at = now;
-    patch.last_error_body = responseForStorage(input.responseBody ?? "");
+    patch.last_error_body = responseBody;
   }
+
+  const logPayload = {
+    http_status: input.status,
+    response_body: responseBody,
+    endpoint_called: input.endpoint,
+    oauth_scopes: MELHOR_ENVIO_SCOPE_TEXT,
+    environment: input.env === "production" ? "Production" : "Sandbox",
+    redirect_uri: input.requestContext?.redirect_uri ?? null,
+    client_id_masked: input.requestContext?.client_id_masked ?? null,
+  };
+  if (input.ok) console.info("[melhor-envio] api-response", logPayload);
+  else console.error("[melhor-envio] api-response", logPayload);
 
   await supabaseAdmin.from("shipping_diagnostics").upsert(patch as never);
 }
