@@ -10,10 +10,7 @@ export function useAdminGuard() {
 
   useEffect(() => {
     if (checking) return;
-    if (!auth.user) {
-      navigate({ to: "/auth" });
-      return;
-    }
+    if (!auth.user) navigate({ to: "/" });
     if (auth.role !== "admin") navigate({ to: "/" });
   }, [checking, auth.user, auth.role, navigate]);
 
