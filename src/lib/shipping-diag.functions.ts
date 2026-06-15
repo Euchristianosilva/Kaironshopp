@@ -1,20 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const OAUTH_SCOPES = "shipping-calculate shipping-tracking cart-read cart-write";
-
-function meBaseFor(env: string) {
-  return env === "production"
-    ? "https://www.melhorenvio.com.br/api/v2"
-    : "https://sandbox.melhorenvio.com.br/api/v2";
-}
-
-function oauthBaseFor(env: string) {
-  return env === "production"
-    ? "https://www.melhorenvio.com.br"
-    : "https://sandbox.melhorenvio.com.br";
-}
+import { MELHOR_ENVIO_ENDPOINT_AUDIT, MELHOR_ENVIO_SCOPE_TEXT, meBaseFor, oauthBaseFor } from "@/lib/melhor-envio.shared";
 
 function normalizeOrigin(origin: string) {
   const url = new URL(origin);
@@ -28,74 +15,6 @@ function integrationUrls(origin: string) {
     callback_url: `${base}/api/public/melhor-envio/oauth-callback`,
     webhook_url: `${base}/api/public/melhor-envio/webhook`,
   };
-}
-
-function tokenExpiryFrom(expiresIn: unknown) {
-  const seconds = typeof expiresIn === "number" ? expiresIn : Number(expiresIn ?? 0);
-  return seconds > 0 ? new Date(Date.now() + seconds * 1000).toISOString() : null;
-}
-
-async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: any) {
-  const expiresAt = cfg?.token_expires_at ? Date.parse(cfg.token_expires_at) : null;
-  const stillValid = !expiresAt || expiresAt > Date.now() + 60_000;
-  if (stillValid || !cfg?.refresh_token || !cfg?.client_id || !cfg?.client_secret) return cfg;
-
-  const env = cfg.environment ?? "sandbox";
-  const endpoint = `${oauthBaseFor(env)}/oauth/token`;
-
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Kairon Shopp (suporte@kaironshopp.com.br)",
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: cfg.client_id,
-        client_secret: cfg.client_secret,
-        refresh_token: cfg.refresh_token,
-      }).toString(),
-    });
-    const text = await res.text();
-    let body: any = null;
-    try { body = JSON.parse(text); } catch {}
-
-    if (!res.ok || !body?.access_token) {
-      await supabaseAdmin.from("shipping_diagnostics").upsert({
-        id: true,
-        last_error_at: new Date().toISOString(),
-        last_error_status: res.status,
-        last_error_endpoint: endpoint,
-        last_error_body: text.slice(0, 1000),
-        last_env: env,
-        updated_at: new Date().toISOString(),
-      });
-      return cfg;
-    }
-
-    const patch = {
-      access_token: body.access_token,
-      refresh_token: body.refresh_token ?? cfg.refresh_token,
-      token_expires_at: tokenExpiryFrom(body.expires_in),
-      last_sync_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    await supabaseAdmin.from("melhor_envio_config").update(patch as never).eq("id", true);
-    return { ...cfg, ...patch };
-  } catch (e) {
-    await supabaseAdmin.from("shipping_diagnostics").upsert({
-      id: true,
-      last_error_at: new Date().toISOString(),
-      last_error_status: 0,
-      last_error_endpoint: endpoint,
-      last_error_body: e instanceof Error ? e.message : String(e),
-      last_env: env,
-      updated_at: new Date().toISOString(),
-    });
-    return cfg;
-  }
 }
 
 async function assertAdmin(ctx: { supabase: any; userId: string }) {
@@ -115,7 +34,7 @@ export const getShippingDiagnostics = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    let { data: cfg } = await supabaseAdmin
+    const { data: cfg } = await supabaseAdmin
       .from("melhor_envio_config")
       .select("*")
       .eq("id", true)
@@ -141,13 +60,15 @@ export const getShippingDiagnostics = createServerFn({ method: "GET" })
         webhook_url: row.webhook_url ?? "https://kaironshopp.lovable.app/api/public/melhor-envio/webhook",
         last_sync_at: row.last_sync_at ?? null,
         updated_at: row.updated_at ?? null,
+        oauth_scopes: row.oauth_scopes ?? MELHOR_ENVIO_SCOPE_TEXT,
       },
       base_url: meBaseFor(env),
       oauth: {
         authorize_base_url: `${oauthBaseFor(env)}/oauth/authorize`,
-        scopes: OAUTH_SCOPES,
+        scopes: MELHOR_ENVIO_SCOPE_TEXT,
+        endpoints: MELHOR_ENVIO_ENDPOINT_AUDIT,
       },
-      diagnostics: diag ?? null,
+      diagnostics: (diag as any) ?? null,
     };
   });
 
@@ -155,6 +76,7 @@ const OAuthStartSchema = z.object({
   environment: z.enum(["sandbox", "production"]),
   client_id: z.string().min(1).max(200),
   client_secret: z.string().min(1).max(500),
+  webhook_url: z.preprocess((v) => v === "" ? null : v, z.string().trim().url("URL do webhook inválida").max(500).optional().nullable()),
   origin: z.string().url(),
 });
 
@@ -166,6 +88,7 @@ export const startMelhorEnvioOAuth = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const urls = integrationUrls(data.origin);
+    const webhookUrl = data.webhook_url || urls.webhook_url;
     const state = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
@@ -175,12 +98,13 @@ export const startMelhorEnvioOAuth = createServerFn({ method: "POST" })
       client_id: data.client_id,
       client_secret: data.client_secret,
       callback_url: urls.callback_url,
-      webhook_url: urls.webhook_url,
+      webhook_url: webhookUrl,
       access_token: null,
       refresh_token: null,
       token_expires_at: null,
       oauth_state: state,
       oauth_state_expires_at: expiresAt,
+      oauth_scopes: MELHOR_ENVIO_SCOPE_TEXT,
       updated_by: context.userId,
       updated_at: new Date().toISOString(),
     } as never);
@@ -190,27 +114,27 @@ export const startMelhorEnvioOAuth = createServerFn({ method: "POST" })
       client_id: data.client_id,
       redirect_uri: urls.callback_url,
       response_type: "code",
-      scope: OAUTH_SCOPES,
+      scope: MELHOR_ENVIO_SCOPE_TEXT,
       state,
     });
 
     return {
       authorization_url: `${oauthBaseFor(data.environment)}/oauth/authorize?${params.toString()}`,
       callback_url: urls.callback_url,
-      webhook_url: urls.webhook_url,
-      scopes: OAUTH_SCOPES,
+      webhook_url: webhookUrl,
+      scopes: MELHOR_ENVIO_SCOPE_TEXT,
       state_expires_at: expiresAt,
     };
   });
 
 const SaveSchema = z.object({
   environment: z.enum(["sandbox", "production"]),
-  client_id: z.string().max(200).optional().nullable(),
+  client_id: z.string().trim().min(1, "Client ID obrigatório").max(200).optional().nullable(),
   client_secret: z.string().max(500).optional().nullable(),
   access_token: z.string().max(4000).optional().nullable(),
   refresh_token: z.string().max(4000).optional().nullable(),
   callback_url: z.string().max(500).optional().nullable(),
-  webhook_url: z.string().max(500).optional().nullable(),
+  webhook_url: z.preprocess((v) => v === "" ? null : v, z.string().trim().url("URL do webhook inválida").max(500).optional().nullable()),
 });
 
 export const saveMelhorEnvioConfig = createServerFn({ method: "POST" })
@@ -237,8 +161,11 @@ export const saveMelhorEnvioConfig = createServerFn({ method: "POST" })
     patch.callback_url = data.callback_url !== undefined ? data.callback_url : current?.callback_url ?? null;
     patch.webhook_url = data.webhook_url !== undefined ? data.webhook_url : current?.webhook_url ?? null;
     patch.client_secret = data.client_secret ? data.client_secret : current?.client_secret ?? null;
-    patch.access_token = data.access_token ? data.access_token : current?.access_token ?? null;
-    patch.refresh_token = data.refresh_token ? data.refresh_token : current?.refresh_token ?? null;
+    patch.oauth_scopes = MELHOR_ENVIO_SCOPE_TEXT;
+    const environmentChanged = current?.environment && current.environment !== data.environment;
+    patch.access_token = environmentChanged ? null : data.access_token ? data.access_token : current?.access_token ?? null;
+    patch.refresh_token = environmentChanged ? null : data.refresh_token ? data.refresh_token : current?.refresh_token ?? null;
+    patch.token_expires_at = environmentChanged ? null : current?.token_expires_at ?? null;
 
     const { error } = await supabaseAdmin
       .from("melhor_envio_config")
@@ -252,20 +179,26 @@ export const refreshMelhorEnvioToken = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { refreshAccessTokenIfNeeded } = await import("@/lib/melhor-envio.server");
     const { data: cfg } = await supabaseAdmin
       .from("melhor_envio_config")
       .select("*")
       .eq("id", true)
       .maybeSingle();
     if (!cfg?.refresh_token) {
-      return { ok: false, error: "Sem refresh token. Reconecte a aplicação via OAuth." };
+      return { ok: false, error: "Sem refresh token. Reconecte a aplicação via OAuth.", reauth_url: null };
     }
     // Force refresh by zeroing expiry
     const updated = await refreshAccessTokenIfNeeded(supabaseAdmin, { ...(cfg as any), token_expires_at: new Date(0).toISOString() });
     const ok = (updated as any)?.access_token && (updated as any)?.access_token !== (cfg as any)?.access_token;
+    const { data: diag } = ok ? { data: null } : await supabaseAdmin
+      .from("shipping_diagnostics")
+      .select("reauth_url")
+      .eq("id", true)
+      .maybeSingle();
     return ok
-      ? { ok: true, token_expires_at: (updated as any).token_expires_at }
-      : { ok: false, error: "Falha ao atualizar o token. Verifique credenciais." };
+      ? { ok: true, token_expires_at: (updated as any).token_expires_at, reauth_url: null }
+      : { ok: false, error: "Falha ao atualizar o token. Verifique credenciais.", reauth_url: (diag as any)?.reauth_url ?? null };
   });
 
 export const pingMelhorEnvio = createServerFn({ method: "POST" })
@@ -273,69 +206,45 @@ export const pingMelhorEnvio = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    let { data: cfg } = await supabaseAdmin
+    const { melhorEnvioRequest } = await import("@/lib/melhor-envio.server");
+    const { data: cfg } = await supabaseAdmin
       .from("melhor_envio_config")
       .select("*")
       .eq("id", true)
       .maybeSingle();
 
-    cfg = await refreshAccessTokenIfNeeded(supabaseAdmin, cfg as any);
-
     const env = cfg?.environment ?? "sandbox";
     const base = meBaseFor(env);
     const endpoint = `${base}/me`;
-    const token = cfg?.access_token;
 
-    if (!token) {
+    if (!cfg?.access_token) {
       return {
         ok: false,
         status: 0,
         env,
         endpoint,
-        error: "Access Token não configurado. Preencha o formulário ao lado.",
+        error: "Access Token não configurado. Reautorize o OAuth.",
+        reauth_url: null,
+        reauth_reason: "Access Token não configurado.",
       };
     }
 
     try {
-      const res = await fetch(endpoint, {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-          "User-Agent": "Kairon Shopp (suporte@kaironshopp.com.br)",
-        },
-      });
-      const text = await res.text();
-      let parsed: any = null;
-      try { parsed = JSON.parse(text); } catch {}
-
-      if (res.ok) {
-        await supabaseAdmin.from("shipping_diagnostics").upsert({
-          id: true,
-          last_success_at: new Date().toISOString(),
-          last_env: env,
-          updated_at: new Date().toISOString(),
-        });
-      } else {
-        await supabaseAdmin.from("shipping_diagnostics").upsert({
-          id: true,
-          last_error_at: new Date().toISOString(),
-          last_error_status: res.status,
-          last_error_endpoint: endpoint,
-          last_error_body: text.slice(0, 1000),
-          last_env: env,
-          updated_at: new Date().toISOString(),
-        });
-      }
+      const result = await melhorEnvioRequest(supabaseAdmin, cfg as any, { endpoint, method: "GET" });
+      const parsed: any = result.json;
 
       return {
-        ok: res.ok,
-        status: res.status,
+        ok: result.ok,
+        status: result.status,
         env,
         endpoint,
         user: parsed && (parsed.email || parsed.name)
           ? { email: parsed.email, name: parsed.name }
           : null,
-        body: res.ok ? null : text.slice(0, 500),
+        body: result.ok ? null : result.text.slice(0, 500),
+        error: result.reauth_reason ?? undefined,
+        reauth_url: result.reauth_url,
+        reauth_reason: result.reauth_reason,
       };
     } catch (e) {
       return {
@@ -344,6 +253,10 @@ export const pingMelhorEnvio = createServerFn({ method: "POST" })
         env,
         endpoint,
         error: e instanceof Error ? e.message : "Erro desconhecido",
+        body: null,
+        user: null,
+        reauth_url: null,
+        reauth_reason: null,
       };
     }
   });

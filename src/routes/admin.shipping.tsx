@@ -110,6 +110,7 @@ function AdminShippingWizard() {
         toast.success("Token atualizado com sucesso.");
         qc.invalidateQueries({ queryKey: ["me-config"] });
       } else {
+        if (res.reauth_url) setOauthUrl(res.reauth_url);
         toast.error(res.error ?? "Não foi possível atualizar o token.");
       }
     },
@@ -126,7 +127,8 @@ function AdminShippingWizard() {
         setReconfigure(false);
         await qc.invalidateQueries({ queryKey: ["me-config"] });
       } else {
-        toast.error(`Credenciais inválidas (${res.status}). Revise os tokens.`);
+        if (res.reauth_url) setOauthUrl(res.reauth_url);
+        toast.error(res.reauth_reason ?? `Credenciais inválidas (${res.status}). Revise os tokens.`);
       }
     } catch {}
   }
@@ -168,13 +170,34 @@ function AdminShippingWizard() {
             <InfoRow label="Última atualização" value={cfg?.updated_at ? new Date(cfg.updated_at).toLocaleString("pt-BR") : "—"} />
             <InfoRow label="Último sucesso" value={diag?.last_success_at ? new Date(diag.last_success_at).toLocaleString("pt-BR") : "—"} />
             <InfoRow label="Último erro" value={diag?.last_error_at ? `${diag.last_error_status ?? "?"} · ${new Date(diag.last_error_at).toLocaleString("pt-BR")}` : "—"} />
-            <InfoRow label="Endpoint" value={data.base_url} />
+            <InfoRow label="Método" value={diag?.last_request_method ?? "—"} />
+            <InfoRow label="Status HTTP" value={diag?.last_error_status ?? "—"} />
+            <InfoRow label="Endpoint base" value={data.base_url} />
+            <div className="sm:col-span-2"><InfoRow label="Última URL chamada" value={diag?.last_error_endpoint ?? "—"} /></div>
+            <div className="sm:col-span-2"><InfoRow label="Escopos OAuth" value={cfg?.oauth_scopes || data.oauth.scopes} /></div>
             <div className="sm:col-span-2"><InfoRow label="Webhook URL" value={cfg?.webhook_url || "—"} /></div>
           </div>
+
+          {diag?.last_response_body && (
+            <details className="text-left text-xs rounded-md bg-secondary/40 p-3 mb-4">
+              <summary className="cursor-pointer font-semibold">Resposta completa da última chamada</summary>
+              <pre className="mt-2 whitespace-pre-wrap break-words max-h-56 overflow-auto">{diag.last_response_body}</pre>
+            </details>
+          )}
 
           {pingRes && (
             <div className={`text-sm rounded-md p-3 mb-4 ${pingRes.ok ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
               {pingRes.ok ? `Conexão OK (${pingRes.status})${pingRes.user?.email ? ` — ${pingRes.user.email}` : ""}` : `Falha (${pingRes.status}): ${pingRes.error ?? pingRes.body ?? ""}`}
+              {!pingRes.ok && pingRes.reauth_url && (
+                <a href={pingRes.reauth_url} className="block mt-2 underline font-semibold">Reautorizar OAuth no Melhor Envio</a>
+              )}
+            </div>
+          )}
+
+          {diag?.reauth_required && (
+            <div className="text-sm rounded-md p-3 mb-4 bg-destructive/10 text-destructive text-left">
+              <strong>Reautorização necessária:</strong> {diag.reauth_reason ?? "Token inválido ou sem permissão."}
+              {diag.reauth_url && <a href={diag.reauth_url} className="block mt-2 underline font-semibold">Abrir autorização OAuth</a>}
             </div>
           )}
 
@@ -319,8 +342,13 @@ function AdminShippingWizard() {
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Agora a plataforma abre o Melhor Envio para autorização oficial OAuth 2.0. O <strong>Access Token</strong> e o <strong>Refresh Token</strong> serão gerados automaticamente após a aprovação.
-              <code className="block mt-1 text-[10px] bg-secondary rounded p-2">shipping-calculate shipping-tracking cart-read cart-write</code>
+              <code className="block mt-1 text-[10px] bg-secondary rounded p-2">{data.oauth.scopes}</code>
             </p>
+            <div className="rounded-lg bg-secondary/40 p-4 text-xs space-y-2">
+              {data.oauth.endpoints.map((item) => (
+                <InfoRow key={item.path} label={`${item.method} ${item.path}`} value={`${item.scope} · ${item.purpose}`} />
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => oauthMut.mutate()}
@@ -369,6 +397,9 @@ function AdminShippingWizard() {
                   {pingMut.data.ok
                     ? `Conexão OK (${pingMut.data.status})${pingMut.data.user?.email ? ` — ${pingMut.data.user.email}` : ""}`
                     : `Falha (${pingMut.data.status}): ${pingMut.data.error ?? pingMut.data.body ?? "verifique credenciais"}`}
+                  {!pingMut.data.ok && pingMut.data.reauth_url && (
+                    <a href={pingMut.data.reauth_url} className="block mt-2 underline font-semibold">Reautorizar OAuth no Melhor Envio</a>
+                  )}
                 </div>
               </div>
             )}

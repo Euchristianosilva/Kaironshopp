@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { meBaseFor } from "@/lib/melhor-envio.shared";
 
 const ItemSchema = z.object({ product_id: z.string().uuid(), qty: z.number().int().min(1).max(999) });
 const CalcInput = z.object({
@@ -22,96 +23,18 @@ type Quote = {
   error?: string;
 };
 
-function meBaseFor(env: string) {
-  return env === "production"
-    ? "https://www.melhorenvio.com.br/api/v2"
-    : "https://sandbox.melhorenvio.com.br/api/v2";
-}
-
-function oauthBaseFor(env: string) {
-  return env === "production"
-    ? "https://www.melhorenvio.com.br"
-    : "https://sandbox.melhorenvio.com.br";
-}
-
-function tokenExpiryFrom(expiresIn: unknown) {
-  const seconds = typeof expiresIn === "number" ? expiresIn : Number(expiresIn ?? 0);
-  return seconds > 0 ? new Date(Date.now() + seconds * 1000).toISOString() : null;
-}
-
-async function refreshAccessTokenIfNeeded(supabaseAdmin: any, cfg: any) {
-  const expiresAt = cfg?.token_expires_at ? Date.parse(cfg.token_expires_at) : null;
-  const stillValid = !expiresAt || expiresAt > Date.now() + 60_000;
-  if (stillValid || !cfg?.refresh_token || !cfg?.client_id || !cfg?.client_secret) return cfg;
-
-  const env = cfg.environment ?? "sandbox";
-  const endpoint = `${oauthBaseFor(env)}/oauth/token`;
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Kairon Shopp (suporte@kaironshopp.com.br)",
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: cfg.client_id,
-        client_secret: cfg.client_secret,
-        refresh_token: cfg.refresh_token,
-      }).toString(),
-    });
-    const text = await res.text();
-    let body: any = null;
-    try { body = JSON.parse(text); } catch {}
-
-    if (!res.ok || !body?.access_token) {
-      await supabaseAdmin.from("shipping_diagnostics").upsert({
-        id: true,
-        last_error_at: new Date().toISOString(),
-        last_error_status: res.status,
-        last_error_endpoint: endpoint,
-        last_error_body: text.slice(0, 1000),
-        last_env: env,
-        updated_at: new Date().toISOString(),
-      });
-      return cfg;
-    }
-
-    const patch = {
-      access_token: body.access_token,
-      refresh_token: body.refresh_token ?? cfg.refresh_token,
-      token_expires_at: tokenExpiryFrom(body.expires_in),
-      last_sync_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    await supabaseAdmin.from("melhor_envio_config").update(patch as never).eq("id", true);
-    return { ...cfg, ...patch };
-  } catch (e) {
-    await supabaseAdmin.from("shipping_diagnostics").upsert({
-      id: true,
-      last_error_at: new Date().toISOString(),
-      last_error_status: 0,
-      last_error_endpoint: endpoint,
-      last_error_body: e instanceof Error ? e.message : String(e),
-      last_env: env,
-      updated_at: new Date().toISOString(),
-    });
-    return cfg;
-  }
-}
-
 export const calculateShipping = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => CalcInput.parse(d))
   .handler(async ({ data }): Promise<{ quotes: Quote[] }> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { melhorEnvioRequest, refreshAccessTokenIfNeeded } = await import("@/lib/melhor-envio.server");
 
-    let { data: cfg } = await supabaseAdmin
+    const { data: cfgRow } = await supabaseAdmin
       .from("melhor_envio_config")
       .select("*")
       .eq("id", true)
       .maybeSingle();
-    cfg = await refreshAccessTokenIfNeeded(supabaseAdmin, cfg as any);
+    const cfg = await refreshAccessTokenIfNeeded(supabaseAdmin, cfgRow as any);
     const token = cfg?.access_token;
     const env = cfg?.environment ?? "sandbox";
     if (!token) throw new Error("Integração Melhor Envio não configurada pelo administrador.");
@@ -208,39 +131,24 @@ export const calculateShipping = createServerFn({ method: "POST" })
           products: meProducts,
         };
         try {
-          const res = await fetch(endpoint, {
+          const result = await melhorEnvioRequest(supabaseAdmin, cfg as any, {
+            endpoint,
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-              "User-Agent": "Kairon Shopp (suporte@kaironshopp.com.br)",
-            },
-            body: JSON.stringify(payload),
+            requestPayload: payload,
           });
-          if (!res.ok) {
-            const txt = await res.text();
+          if (!result.ok) {
+            const txt = result.text;
             console.error("[melhor-envio] calculate failed", {
-              status: res.status,
+              status: result.status,
               env,
               endpoint,
               payload,
               body: txt.slice(0, 500),
             });
-            await supabaseAdmin.from("shipping_diagnostics").upsert({
-              id: true,
-              last_error_at: new Date().toISOString(),
-              last_error_status: res.status,
-              last_error_endpoint: endpoint,
-              last_error_body: txt.slice(0, 1000),
-              last_request_payload: payload as never,
-              last_env: env,
-              updated_at: new Date().toISOString(),
-            });
             let friendly: string;
-            if (res.status === 401 || res.status === 403) {
-              friendly = "Cálculo de frete temporariamente indisponível. Nossa equipe foi notificada.";
-            } else if (res.status === 422) {
+            if (result.status === 401 || result.status === 403) {
+              friendly = "Integração de frete precisa ser reautorizada pelo administrador.";
+            } else if (result.status === 422) {
               friendly = "Não foi possível calcular o frete para este endereço.";
             } else {
               friendly = "Frete temporariamente indisponível. Tente novamente.";
@@ -254,7 +162,7 @@ export const calculateShipping = createServerFn({ method: "POST" })
             });
             continue;
           }
-          const raw = (await res.json()) as Array<{
+          const raw = (Array.isArray(result.json) ? result.json : []) as Array<{
             id: number;
             name: string;
             price?: string;

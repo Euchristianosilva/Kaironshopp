@@ -1,10 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-
-function oauthBaseFor(env: string) {
-  return env === "production"
-    ? "https://www.melhorenvio.com.br"
-    : "https://sandbox.melhorenvio.com.br";
-}
+import { MELHOR_ENVIO_SCOPE_TEXT, oauthBaseFor } from "@/lib/melhor-envio.shared";
 
 function tokenExpiryFrom(expiresIn: unknown) {
   const seconds = typeof expiresIn === "number" ? expiresIn : Number(expiresIn ?? 0);
@@ -49,6 +44,7 @@ export const Route = createFileRoute("/api/public/melhor-envio/oauth-callback")(
 
         const env = row.environment ?? "sandbox";
         const endpoint = `${oauthBaseFor(env)}/oauth/token`;
+        const { recordMelhorEnvioDiagnostic } = await import("@/lib/melhor-envio.server");
 
         try {
           const res = await fetch(endpoint, {
@@ -71,14 +67,13 @@ export const Route = createFileRoute("/api/public/melhor-envio/oauth-callback")(
           try { body = JSON.parse(text); } catch {}
 
           if (!res.ok || !body?.access_token) {
-            await supabaseAdmin.from("shipping_diagnostics").upsert({
-              id: true,
-              last_error_at: new Date().toISOString(),
-              last_error_status: res.status,
-              last_error_endpoint: endpoint,
-              last_error_body: text.slice(0, 1000),
-              last_env: env,
-              updated_at: new Date().toISOString(),
+            await recordMelhorEnvioDiagnostic(supabaseAdmin, {
+              ok: false,
+              env,
+              endpoint,
+              method: "POST",
+              status: res.status,
+              responseBody: text,
             });
             return redirectToAdmin(request, "error", "Não foi possível gerar os tokens.");
           }
@@ -89,27 +84,29 @@ export const Route = createFileRoute("/api/public/melhor-envio/oauth-callback")(
             token_expires_at: tokenExpiryFrom(body.expires_in),
             oauth_state: null,
             oauth_state_expires_at: null,
+            oauth_scopes: MELHOR_ENVIO_SCOPE_TEXT,
             last_sync_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           } as never).eq("id", true);
 
-          await supabaseAdmin.from("shipping_diagnostics").upsert({
-            id: true,
-            last_success_at: new Date().toISOString(),
-            last_env: env,
-            updated_at: new Date().toISOString(),
+          await recordMelhorEnvioDiagnostic(supabaseAdmin, {
+            ok: true,
+            env,
+            endpoint,
+            method: "POST",
+            status: res.status,
+            responseBody: text,
           });
 
           return redirectToAdmin(request, "success");
         } catch (e) {
-          await supabaseAdmin.from("shipping_diagnostics").upsert({
-            id: true,
-            last_error_at: new Date().toISOString(),
-            last_error_status: 0,
-            last_error_endpoint: endpoint,
-            last_error_body: e instanceof Error ? e.message : String(e),
-            last_env: env,
-            updated_at: new Date().toISOString(),
+          await recordMelhorEnvioDiagnostic(supabaseAdmin, {
+            ok: false,
+            env,
+            endpoint,
+            method: "POST",
+            status: 0,
+            responseBody: e instanceof Error ? e.message : String(e),
           });
           return redirectToAdmin(request, "error", "Falha ao concluir autorização.");
         }
