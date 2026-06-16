@@ -5,6 +5,31 @@
 
 import JsBarcode from "jsbarcode";
 import QRCode from "qrcode";
+import kaironLogo from "@/assets/kairon-logo.png.asset.json";
+
+// Cache the platform logo as a data URL so it renders in popup windows
+// and prints reliably (no CORS / no relative-URL issues).
+let cachedLogoDataUrl: string | null | undefined;
+async function getPlatformLogoDataUrl(): Promise<string | null> {
+  if (cachedLogoDataUrl !== undefined) return cachedLogoDataUrl;
+  try {
+    const url = kaironLogo.url.startsWith("http")
+      ? kaironLogo.url
+      : `${window.location.origin}${kaironLogo.url}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("logo fetch failed");
+    const blob = await res.blob();
+    cachedLogoDataUrl = await new Promise<string>((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result));
+      fr.onerror = () => reject(fr.error);
+      fr.readAsDataURL(blob);
+    });
+  } catch {
+    cachedLogoDataUrl = null;
+  }
+  return cachedLogoDataUrl;
+}
 
 export type LabelData = {
   orderId: string;
@@ -105,6 +130,9 @@ export async function buildLabelHtml(data: LabelData): Promise<string> {
   });
   const qrDataUrl = await QRCode.toDataURL(qrPayload, { margin: 0, width: 200, errorCorrectionLevel: "M" });
   const barcodeSvg = tracking ? await buildBarcodeSvg(tracking) : "";
+  // Prefer the platform's official logo; fall back to per-sender override, then "K" placeholder.
+  const platformLogo = await getPlatformLogoDataUrl();
+  const logoSrc = platformLogo || s.logoUrl || "";
 
   const recipientLines = [
     [r.address, r.number].filter(Boolean).join(", "),
@@ -242,7 +270,7 @@ export async function buildLabelHtml(data: LabelData): Promise<string> {
     <!-- Cabeçalho com marca Kairon Shop -->
     <div class="header">
       <div class="brand">
-        <div class="logo">${s.logoUrl ? `<img src="${esc(s.logoUrl)}" alt="" />` : "K"}</div>
+        <div class="logo${logoSrc ? " has-img" : ""}">${logoSrc ? `<img src="${esc(logoSrc)}" alt="${esc(marketplace)}" />` : "K"}</div>
         <div class="wordmark">
           <div class="n">${esc(marketplace)}</div>
           <div class="t">Etiqueta de envio</div>
