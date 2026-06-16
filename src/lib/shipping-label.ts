@@ -296,16 +296,6 @@ export async function buildLabelHtml(data: LabelData): Promise<string> {
       <div class="qr"><img src="${qrDataUrl}" alt="QR" /></div>
     </div>
   </div>
-    </div>
-
-    <div class="codes">
-      <div class="barcode">
-        ${barcodeSvg || '<div style="font-size:9pt;color:#666">Sem código de rastreio</div>'}
-        ${tracking ? `<div class="tc">${esc(tracking)}</div>` : ""}
-      </div>
-      <div class="qr"><img src="${qrDataUrl}" alt="QR" /></div>
-    </div>
-  </div>
 </body>
 </html>`;
 }
