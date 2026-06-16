@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import type { MouseEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Header } from "@/components/marketplace/Header";
 import { Footer } from "@/components/marketplace/Footer";
@@ -34,7 +35,7 @@ function ProductPage() {
   
   const [chatLoading, setChatLoading] = useState(false);
   const [buying, setBuying] = useState(false);
-  const buyNow = (event?: React.MouseEvent<HTMLButtonElement>) => {
+  const buyNow = (event?: MouseEvent<HTMLButtonElement>) => {
     event?.preventDefault();
     if (buying) return;
     if (!user) { navigate({ to: "/auth" }); return; }
