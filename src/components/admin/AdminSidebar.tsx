@@ -42,6 +42,13 @@ const sections: Array<{ label: string; items: Array<{ to: string; label: string;
     ],
   },
   {
+    label: "Atendimento",
+    items: [
+      { to: "/admin/support", label: "Suporte", icon: LifeBuoy },
+      { to: "/admin/support-team", label: "Equipe de Suporte", icon: UserCog },
+    ],
+  },
+  {
     label: "Sistema",
     items: [
       { to: "/admin/shipping", label: "Frete (Melhor Envio)", icon: Truck },
