@@ -1140,6 +1140,7 @@ export type Database = {
           product_id: string
           seller_id: string
           starts_at: string
+          type: Database["public"]["Enums"]["promotion_type"]
           updated_at: string
         }
         Insert: {
@@ -1152,6 +1153,7 @@ export type Database = {
           product_id: string
           seller_id: string
           starts_at?: string
+          type?: Database["public"]["Enums"]["promotion_type"]
           updated_at?: string
         }
         Update: {
@@ -1164,6 +1166,7 @@ export type Database = {
           product_id?: string
           seller_id?: string
           starts_at?: string
+          type?: Database["public"]["Enums"]["promotion_type"]
           updated_at?: string
         }
         Relationships: [
@@ -1918,6 +1921,7 @@ export type Database = {
         | "payout_paid"
         | "generic"
       product_condition: "new" | "refurbished" | "used"
+      promotion_type: "flash" | "exclusive"
       support_department:
         | "financial"
         | "commercial"
@@ -2098,6 +2102,7 @@ export const Constants = {
         "generic",
       ],
       product_condition: ["new", "refurbished", "used"],
+      promotion_type: ["flash", "exclusive"],
       support_department: [
         "financial",
         "commercial",
