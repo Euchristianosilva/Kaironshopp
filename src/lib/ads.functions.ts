@@ -4,6 +4,28 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type Placement = "card" | "carousel";
 
+function maskStripeId(id: string | null | undefined) {
+  if (!id) return null;
+  return `${id.slice(0, 10)}…${id.slice(-4)}`;
+}
+
+function stripeKeyMode(key: string) {
+  if (key.startsWith("sk_test_")) return "test";
+  if (key.startsWith("sk_live_")) return "live";
+  if (key.startsWith("pk_")) return "publishable_key_invalid_for_server";
+  if (key.startsWith("rk_")) return "restricted_key_may_fail";
+  return "unknown";
+}
+
+function normalizeCheckoutOrigin(origin: string) {
+  const parsed = new URL(origin);
+  const isLocalhost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  if (parsed.protocol !== "https:" && !(isLocalhost && parsed.protocol === "http:")) {
+    throw new Error("Origem inválida para redirecionamento do Stripe");
+  }
+  return parsed.origin;
+}
+
 function validStripeImage(url: string | null | undefined) {
   if (!url) return undefined;
   try {
@@ -49,8 +71,27 @@ export const createAdCheckout = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error("STRIPE_SECRET_KEY não configurada");
+    const keyMode = stripeKeyMode(key);
+    if (keyMode === "publishable_key_invalid_for_server") {
+      throw new Error("STRIPE_SECRET_KEY está configurada com chave publicável (pk_). Use uma chave secreta sk_test_ ou sk_live_.");
+    }
+    if (keyMode === "unknown") {
+      throw new Error("STRIPE_SECRET_KEY possui formato inválido. Use uma chave secreta sk_test_ ou sk_live_.");
+    }
 
     const { supabase, userId } = context;
+    const checkoutOrigin = normalizeCheckoutOrigin(data.origin);
+    const stripe = new Stripe(key);
+    console.info("[ad-checkout] start", {
+      userId,
+      productId: data.productId,
+      placement: data.placement,
+      startsAt: data.startsAt,
+      endsAt: data.endsAt,
+      origin: checkoutOrigin,
+      stripeMode: keyMode,
+      hasPublishableKey: Boolean(process.env.STRIPE_PUBLISHABLE_KEY),
+    });
 
     // 1) Carregar produto e validar propriedade/estado
     const { data: product, error: pErr } = await supabase
@@ -67,10 +108,25 @@ export const createAdCheckout = createServerFn({ method: "POST" })
     if (!product.is_active) throw new Error("Produto inativo não pode ser turbinado");
     if ((product.stock ?? 0) <= 0) throw new Error("Produto sem estoque");
 
-    // 2) Conflito de período (mesmo produto + placement, campanhas vivas)
-    const { data: conflicts } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 2) Limpar tentativas antigas/sem sessão e tratar retentativas com sessão aberta
+    await supabaseAdmin
       .from("ad_campaigns")
-      .select("id, starts_at, ends_at, status")
+      .update({
+        status: "canceled",
+        canceled_at: new Date().toISOString(),
+        metadata: { checkout_error: "stale_pending_payment_without_stripe_session" },
+      } as any)
+      .eq("product_id", product.id)
+      .eq("placement", data.placement)
+      .eq("owner_id", userId)
+      .eq("status", "pending_payment")
+      .is("stripe_session_id", null);
+
+    const { data: conflicts } = await supabaseAdmin
+      .from("ad_campaigns")
+      .select("id, starts_at, ends_at, status, stripe_session_id")
       .eq("product_id", product.id)
       .eq("placement", data.placement)
       .in("status", ["pending_payment", "scheduled", "active"]);
@@ -82,7 +138,25 @@ export const createAdCheckout = createServerFn({ method: "POST" })
       return cs < endMs && ce > startMs;
     });
     if (overlap) {
-      throw new Error("Já existe um anúncio ativo/agendado neste período para este produto");
+      if (overlap.status === "pending_payment" && (overlap as any).stripe_session_id) {
+        const existingSession = await stripe.checkout.sessions.retrieve((overlap as any).stripe_session_id);
+        console.info("[ad-checkout] existing_session", {
+          campaignId: overlap.id,
+          sessionId: maskStripeId(existingSession.id),
+          sessionStatus: existingSession.status,
+          paymentStatus: existingSession.payment_status,
+          hasUrl: Boolean(existingSession.url),
+        });
+        if (existingSession.status === "open" && existingSession.url) {
+          return { url: existingSession.url, campaignId: overlap.id, amountCents: existingSession.amount_total ?? 0 };
+        }
+        await supabaseAdmin
+          .from("ad_campaigns")
+          .update({ status: "canceled", canceled_at: new Date().toISOString() } as any)
+          .eq("id", overlap.id);
+      } else {
+        throw new Error("Já existe um anúncio ativo/agendado neste período para este produto");
+      }
     }
 
     // 3) Buscar preço
@@ -102,7 +176,7 @@ export const createAdCheckout = createServerFn({ method: "POST" })
     if (amountCents < 100) throw new Error("Valor mínimo do anúncio é R$ 1,00");
 
     // 4) Criar campanha pending_payment
-    const { data: campaign, error: cErr } = await supabase
+    const { data: campaign, error: cErr } = await supabaseAdmin
       .from("ad_campaigns")
       .insert({
         product_id: product.id,
@@ -121,9 +195,9 @@ export const createAdCheckout = createServerFn({ method: "POST" })
     if (cErr) throw cErr;
 
     // 5) Stripe Checkout
-    const stripe = new Stripe(key);
     const placementLabel = data.placement === "carousel" ? "Carrossel Principal" : "Card Patrocinado";
     try {
+      console.info("[ad-checkout] creating_stripe_session", { campaignId: campaign.id, amountCents, currency: pricing.currency || "brl" });
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         line_items: [
@@ -146,20 +220,30 @@ export const createAdCheckout = createServerFn({ method: "POST" })
           product_id: product.id,
           user_id: userId,
         },
-        success_url: `${data.origin}/seller/promotions?ads=success`,
-        cancel_url: `${data.origin}/seller/promotions?ads=canceled`,
+        success_url: `${checkoutOrigin}/seller/promotions?ads=success`,
+        cancel_url: `${checkoutOrigin}/seller/promotions?ads=canceled`,
       });
 
-      const { error: sessionUpdateErr } = await supabase
+      const { error: sessionUpdateErr } = await supabaseAdmin
         .from("ad_campaigns")
         .update({ stripe_session_id: session.id })
         .eq("id", campaign.id);
       if (sessionUpdateErr) throw sessionUpdateErr;
 
       if (!session.url) throw new Error("Stripe não retornou a URL de pagamento");
+      console.info("[ad-checkout] session_created", {
+        campaignId: campaign.id,
+        sessionId: maskStripeId(session.id),
+        amountCents,
+        hasUrl: Boolean(session.url),
+      });
       return { url: session.url, campaignId: campaign.id, amountCents };
     } catch (error) {
-      await supabase
+      console.error("[ad-checkout] stripe_session_failed", {
+        campaignId: campaign.id,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      await supabaseAdmin
         .from("ad_campaigns")
         .update({
           status: "canceled",
