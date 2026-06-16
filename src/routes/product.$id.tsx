@@ -33,17 +33,21 @@ function ProductPage() {
   const checkoutFn = useServerFn(createStripeCheckout);
   const [chatLoading, setChatLoading] = useState(false);
   const [buying, setBuying] = useState(false);
-  const buyNow = async () => {
+  const buyNow = () => {
     if (buying) return;
     if (!user) { navigate({ to: "/auth" }); return; }
+    const productData = product;
+    if (!productData) {
+      toast.error("Produto não disponível");
+      return;
+    }
     setBuying(true);
     try {
-      const { url } = await checkoutFn({ data: { items: [{ productId: id, qty }], origin: window.location.origin } });
-      if (!url) throw new Error("URL do Stripe não retornada");
-      window.location.href = url;
+      addToCart(productData, qty);
+      navigate({ to: "/checkout" });
     } catch (e: any) {
       console.error("buyNow failed", e);
-      toast.error(e?.message ?? "Falha ao iniciar pagamento");
+      toast.error(e?.message ?? "Não foi possível continuar");
       setBuying(false);
     }
   };
