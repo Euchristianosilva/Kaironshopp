@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { Link } from "@tanstack/react-router";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -82,7 +83,7 @@ export function BannerCarousel({ premiumItems = [] }: { premiumItems?: Sponsored
   );
 }
 
-function CarouselControls({ total, current, setCurrent }: { total: number; current: number; setCurrent: React.Dispatch<React.SetStateAction<number>> }) {
+function CarouselControls({ total, current, setCurrent }: { total: number; current: number; setCurrent: Dispatch<SetStateAction<number>> }) {
   return (
     <>
       <button
