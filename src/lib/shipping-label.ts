@@ -93,7 +93,7 @@ export async function buildLabelHtml(data: LabelData): Promise<string> {
   const s = data.sender;
   const tracking = data.trackingCode || "";
   const shortOrder = data.orderId.slice(0, 8).toUpperCase();
-  const marketplace = data.marketplaceName ?? "MercaBrasil";
+  const marketplace = data.marketplaceName ?? "Kairon Shop";
   const trackingUrl = data.trackingUrl ?? (tracking ? `${window.location.origin}/account` : "");
   const orderUrl = data.orderUrl ?? `${window.location.origin}/account`;
 
