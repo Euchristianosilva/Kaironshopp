@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { LifeBuoy } from "lucide-react";
-import { AdminShell } from "@/components/admin/AdminShell";
+import { SupportShell } from "@/components/support/SupportShell";
 import { listAllTickets } from "@/lib/support.functions";
 import { TicketChat } from "@/components/support/TicketChat";
 import { supabase } from "@/integrations/supabase/client";
