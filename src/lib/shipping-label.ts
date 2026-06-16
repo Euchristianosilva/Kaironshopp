@@ -130,6 +130,9 @@ export async function buildLabelHtml(data: LabelData): Promise<string> {
   });
   const qrDataUrl = await QRCode.toDataURL(qrPayload, { margin: 0, width: 200, errorCorrectionLevel: "M" });
   const barcodeSvg = tracking ? await buildBarcodeSvg(tracking) : "";
+  // Prefer the platform's official logo; fall back to per-sender override, then "K" placeholder.
+  const platformLogo = await getPlatformLogoDataUrl();
+  const logoSrc = platformLogo || s.logoUrl || "";
 
   const recipientLines = [
     [r.address, r.number].filter(Boolean).join(", "),
