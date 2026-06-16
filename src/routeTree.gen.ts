@@ -30,6 +30,7 @@ import { Route as SellerPromotionsRouteImport } from './routes/seller.promotions
 import { Route as SellerProfileRouteImport } from './routes/seller.profile'
 import { Route as SellerProductsRouteImport } from './routes/seller.products'
 import { Route as SellerOrdersRouteImport } from './routes/seller.orders'
+import { Route as SellerMessagesRouteImport } from './routes/seller.messages'
 import { Route as SellerHelpRouteImport } from './routes/seller.help'
 import { Route as SellerFinanceRouteImport } from './routes/seller.finance'
 import { Route as SellerCustomersRouteImport } from './routes/seller.customers'
@@ -161,6 +162,11 @@ const SellerProductsRoute = SellerProductsRouteImport.update({
 const SellerOrdersRoute = SellerOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => SellerRoute,
+} as any)
+const SellerMessagesRoute = SellerMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
   getParentRoute: () => SellerRoute,
 } as any)
 const SellerHelpRoute = SellerHelpRouteImport.update({
@@ -335,6 +341,7 @@ export interface FileRoutesByFullPath {
   '/seller/customers': typeof SellerCustomersRoute
   '/seller/finance': typeof SellerFinanceRoute
   '/seller/help': typeof SellerHelpRoute
+  '/seller/messages': typeof SellerMessagesRoute
   '/seller/orders': typeof SellerOrdersRoute
   '/seller/products': typeof SellerProductsRoute
   '/seller/profile': typeof SellerProfileRoute
@@ -383,6 +390,7 @@ export interface FileRoutesByTo {
   '/seller/customers': typeof SellerCustomersRoute
   '/seller/finance': typeof SellerFinanceRoute
   '/seller/help': typeof SellerHelpRoute
+  '/seller/messages': typeof SellerMessagesRoute
   '/seller/orders': typeof SellerOrdersRoute
   '/seller/products': typeof SellerProductsRoute
   '/seller/profile': typeof SellerProfileRoute
@@ -434,6 +442,7 @@ export interface FileRoutesById {
   '/seller/customers': typeof SellerCustomersRoute
   '/seller/finance': typeof SellerFinanceRoute
   '/seller/help': typeof SellerHelpRoute
+  '/seller/messages': typeof SellerMessagesRoute
   '/seller/orders': typeof SellerOrdersRoute
   '/seller/products': typeof SellerProductsRoute
   '/seller/profile': typeof SellerProfileRoute
@@ -486,6 +495,7 @@ export interface FileRouteTypes {
     | '/seller/customers'
     | '/seller/finance'
     | '/seller/help'
+    | '/seller/messages'
     | '/seller/orders'
     | '/seller/products'
     | '/seller/profile'
@@ -534,6 +544,7 @@ export interface FileRouteTypes {
     | '/seller/customers'
     | '/seller/finance'
     | '/seller/help'
+    | '/seller/messages'
     | '/seller/orders'
     | '/seller/products'
     | '/seller/profile'
@@ -584,6 +595,7 @@ export interface FileRouteTypes {
     | '/seller/customers'
     | '/seller/finance'
     | '/seller/help'
+    | '/seller/messages'
     | '/seller/orders'
     | '/seller/products'
     | '/seller/profile'
@@ -768,6 +780,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/seller/orders'
       preLoaderRoute: typeof SellerOrdersRouteImport
+      parentRoute: typeof SellerRoute
+    }
+    '/seller/messages': {
+      id: '/seller/messages'
+      path: '/messages'
+      fullPath: '/seller/messages'
+      preLoaderRoute: typeof SellerMessagesRouteImport
       parentRoute: typeof SellerRoute
     }
     '/seller/help': {
@@ -1008,6 +1027,7 @@ interface SellerRouteChildren {
   SellerCustomersRoute: typeof SellerCustomersRoute
   SellerFinanceRoute: typeof SellerFinanceRoute
   SellerHelpRoute: typeof SellerHelpRoute
+  SellerMessagesRoute: typeof SellerMessagesRoute
   SellerOrdersRoute: typeof SellerOrdersRoute
   SellerProductsRoute: typeof SellerProductsRoute
   SellerProfileRoute: typeof SellerProfileRoute
@@ -1027,6 +1047,7 @@ const SellerRouteChildren: SellerRouteChildren = {
   SellerCustomersRoute: SellerCustomersRoute,
   SellerFinanceRoute: SellerFinanceRoute,
   SellerHelpRoute: SellerHelpRoute,
+  SellerMessagesRoute: SellerMessagesRoute,
   SellerOrdersRoute: SellerOrdersRoute,
   SellerProductsRoute: SellerProductsRoute,
   SellerProfileRoute: SellerProfileRoute,
