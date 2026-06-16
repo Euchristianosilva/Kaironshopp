@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import type { MouseEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Header } from "@/components/marketplace/Header";
 import { Footer } from "@/components/marketplace/Footer";
@@ -25,6 +26,7 @@ function ProductPage() {
   const { id } = Route.useParams();
   const [qty, setQty] = useState(1);
   const addToCart = useStore((s) => s.addToCart);
+  const setBuyNowCart = useStore((s) => s.buyNow);
   const toggleFav = useStore((s) => s.toggleFavorite);
   const isFav = useStore((s) => s.favorites.includes(id));
   const { user } = useAuth();
@@ -33,9 +35,9 @@ function ProductPage() {
   
   const [chatLoading, setChatLoading] = useState(false);
   const [buying, setBuying] = useState(false);
-  const buyNow = () => {
+  const buyNow = (event?: MouseEvent<HTMLButtonElement>) => {
+    event?.preventDefault();
     if (buying) return;
-    if (!user) { navigate({ to: "/auth" }); return; }
     const productData = product;
     if (!productData) {
       toast.error("Produto não disponível");
@@ -43,7 +45,7 @@ function ProductPage() {
     }
     setBuying(true);
     try {
-      addToCart(productData, qty);
+      setBuyNowCart(productData, qty);
       navigate({ to: "/checkout" });
     } catch (e: any) {
       console.error("buyNow failed", e);
@@ -176,6 +178,7 @@ function ProductPage() {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={buyNow}
                 disabled={buying}
                 className="w-full h-11 rounded-lg bg-gradient-brand text-primary-foreground font-bold flex items-center justify-center gap-2 hover:opacity-95 disabled:opacity-60"
@@ -183,15 +186,17 @@ function ProductPage() {
                 <ShoppingCart className="h-4 w-4" /> {buying ? "Redirecionando..." : "Comprar agora"}
               </button>
               <button
+                type="button"
                 onClick={() => { addToCart(product, qty); toast.success("Adicionado ao carrinho"); }}
                 className="w-full h-11 rounded-lg border-2 border-primary text-primary font-bold hover:bg-primary/5"
               >
                 Adicionar ao carrinho
               </button>
-              <button onClick={() => toggleFav(product.id)} className="w-full h-10 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:bg-secondary">
+              <button type="button" onClick={() => toggleFav(product.id)} className="w-full h-10 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:bg-secondary">
                 <Heart className={`h-4 w-4 ${isFav ? "fill-primary text-primary" : ""}`} /> {isFav ? "Favoritado" : "Adicionar aos favoritos"}
               </button>
               <button
+                type="button"
                 onClick={() => openChat(product.sellerId)}
                 disabled={chatLoading}
                 className="w-full h-10 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:bg-secondary border border-border disabled:opacity-50"

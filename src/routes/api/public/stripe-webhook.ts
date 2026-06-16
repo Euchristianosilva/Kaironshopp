@@ -47,11 +47,16 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
                 if (campaignId && s.payment_status === "paid") {
                   const { data: camp } = await supabaseAdmin
                     .from("ad_campaigns")
-                    .select("starts_at")
+                    .select("starts_at, placement, metadata")
                     .eq("id", campaignId)
                     .maybeSingle();
+                  const isPremiumCarousel = camp?.placement === "carousel";
                   const startsAt = camp?.starts_at ? new Date(camp.starts_at).getTime() : 0;
-                  const newStatus = startsAt <= Date.now() ? "active" : "scheduled";
+                  const newStatus = isPremiumCarousel ? "scheduled" : startsAt <= Date.now() ? "active" : "scheduled";
+                  const metadata = {
+                    ...(((camp as any)?.metadata as Record<string, unknown>) ?? {}),
+                    admin_status: isPremiumCarousel ? "awaiting_approval" : "approved",
+                  };
                   await supabaseAdmin
                     .from("ad_campaigns")
                     .update({
@@ -59,6 +64,7 @@ export const Route = createFileRoute("/api/public/stripe-webhook")({
                       paid_at: new Date().toISOString(),
                       stripe_payment_intent_id:
                         typeof s.payment_intent === "string" ? s.payment_intent : null,
+                      metadata,
                     })
                     .eq("id", campaignId);
                 }
