@@ -164,6 +164,7 @@ function Checkout() {
                 <Input placeholder="Endereço" className="sm:col-span-2" value={address.street} onChange={(e) => setAddress({ ...address, street: e.target.value })} />
                 <Input placeholder="Número" value={address.number} onChange={(e) => setAddress({ ...address, number: e.target.value })} />
                 <Input placeholder="Complemento" value={address.complement} onChange={(e) => setAddress({ ...address, complement: e.target.value })} />
+                <Input placeholder="Bairro" value={address.neighborhood} onChange={(e) => setAddress({ ...address, neighborhood: e.target.value })} />
                 <Input placeholder="Cidade" value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} />
                 <Input placeholder="Estado" value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })} />
               </div>
