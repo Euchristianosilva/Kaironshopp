@@ -52,14 +52,18 @@ function Home() {
     queryFn: () => getActiveSponsoredProducts({ data: { placement: "card", limit: 6 } }),
     staleTime: 60_000,
   });
+  const { data: premiumCarousel = [] } = useQuery({
+    queryKey: ["sponsored", "carousel", "premium-home"],
+    queryFn: () => getActiveSponsoredProducts({ data: { placement: "carousel", limit: 6 } }),
+    staleTime: 60_000,
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       <main className="flex-1">
-        <BannerCarousel />
+        <BannerCarousel premiumItems={premiumCarousel} />
         <CategoryGrid />
-        <SponsoredCarousel />
 
         {sponsoredCards.length > 0 && (
           <section className="container mx-auto px-4 mt-10">
