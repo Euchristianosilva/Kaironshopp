@@ -245,6 +245,72 @@ export const listAllAdCampaigns = createServerFn({ method: "GET" })
     }));
   });
 
+export const listPremiumCarouselRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const email = (context.claims as any)?.email as string | undefined;
+    const { assertAdminAccess } = await import("@/lib/admin-auth.server");
+    await assertAdminAccess(context.userId, email);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("ad_campaigns")
+      .select("id, status, starts_at, ends_at, amount_cents, currency, paid_at, created_at, metadata, products(title, image_url), sellers(name)")
+      .eq("placement", "carousel")
+      .not("paid_at", "is", null)
+      .order("paid_at", { ascending: false })
+      .limit(200);
+    if (error) throw error;
+    return data ?? [];
+  });
+
+export const adminReviewPremiumCarousel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { campaignId: string; action: "approve" | "reject" | "remove" }) => {
+    if (!input.campaignId) throw new Error("campaignId obrigatório");
+    if (!["approve", "reject", "remove"].includes(input.action)) throw new Error("Ação inválida");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const email = (context.claims as any)?.email as string | undefined;
+    const { assertAdminAccess } = await import("@/lib/admin-auth.server");
+    await assertAdminAccess(context.userId, email);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: campaign, error: readErr } = await supabaseAdmin
+      .from("ad_campaigns")
+      .select("id, placement, starts_at, ends_at, metadata")
+      .eq("id", data.campaignId)
+      .maybeSingle();
+    if (readErr) throw readErr;
+    if (!campaign || campaign.placement !== "carousel") throw new Error("Solicitação não encontrada");
+
+    const now = new Date();
+    const startsAt = new Date(campaign.starts_at).getTime();
+    const endsAt = new Date(campaign.ends_at).getTime();
+    const currentMetadata = ((campaign as any).metadata ?? {}) as Record<string, unknown>;
+    const update: Record<string, unknown> = {
+      metadata: { ...currentMetadata, reviewed_by: context.userId, reviewed_at: now.toISOString(), admin_action: data.action },
+    };
+    if (data.action === "approve") {
+      update.status = startsAt <= now.getTime() && endsAt > now.getTime() ? "active" : "scheduled";
+      update.activated_by = context.userId;
+      update.activated_at = now.toISOString();
+      update.metadata = { ...(update.metadata as Record<string, unknown>), admin_status: "approved" };
+    } else if (data.action === "reject") {
+      update.status = "rejected";
+      update.metadata = { ...(update.metadata as Record<string, unknown>), admin_status: "rejected" };
+    } else {
+      update.status = "canceled";
+      update.canceled_at = now.toISOString();
+      update.metadata = { ...(update.metadata as Record<string, unknown>), admin_status: "removed" };
+    }
+
+    const { error } = await supabaseAdmin.from("ad_campaigns").update(update).eq("id", data.campaignId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
 /**
  * Admin: altera status de uma campanha (pausar/cancelar/encerrar).
  */
