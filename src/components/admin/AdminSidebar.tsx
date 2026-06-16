@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, Store, Package, ShoppingBag, Tags, Ticket,
-  Image as ImageIcon, DollarSign, TrendingUp, Truck, Megaphone, Settings, ShieldCheck, Flame,
+  Image as ImageIcon, DollarSign, TrendingUp, Truck, Megaphone, Settings, ShieldCheck, Flame, LifeBuoy, UserCog,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
