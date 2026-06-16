@@ -30,7 +30,7 @@ function Checkout() {
   const [calculating, setCalculating] = useState(false);
   const [cep, setCep] = useState("");
   const [address, setAddress] = useState({
-    name: "", cpf: "", phone: "", street: "", number: "", complement: "", city: "", state: "",
+    name: "", cpf: "", phone: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "",
   });
   const [options, setOptions] = useState<ShipOption[]>([]);
   const [shipErr, setShipErr] = useState<string | null>(null);
