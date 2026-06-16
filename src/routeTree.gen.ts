@@ -20,6 +20,7 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SellerIndexRouteImport } from './routes/seller.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as SellerSupportRouteImport } from './routes/seller.support'
 import { Route as SellerSubscriptionRouteImport } from './routes/seller.subscription'
 import { Route as SellerStockRouteImport } from './routes/seller.stock'
 import { Route as SellerShippingRouteImport } from './routes/seller.shipping'
@@ -113,6 +114,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
+} as any)
+const SellerSupportRoute = SellerSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => SellerRoute,
 } as any)
 const SellerSubscriptionRoute = SellerSubscriptionRouteImport.update({
   id: '/subscription',
@@ -352,6 +358,7 @@ export interface FileRoutesByFullPath {
   '/seller/shipping': typeof SellerShippingRoute
   '/seller/stock': typeof SellerStockRoute
   '/seller/subscription': typeof SellerSubscriptionRoute
+  '/seller/support': typeof SellerSupportRoute
   '/admin/': typeof AdminIndexRoute
   '/seller/': typeof SellerIndexRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
@@ -401,6 +408,7 @@ export interface FileRoutesByTo {
   '/seller/shipping': typeof SellerShippingRoute
   '/seller/stock': typeof SellerStockRoute
   '/seller/subscription': typeof SellerSubscriptionRoute
+  '/seller/support': typeof SellerSupportRoute
   '/admin': typeof AdminIndexRoute
   '/seller': typeof SellerIndexRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
@@ -453,6 +461,7 @@ export interface FileRoutesById {
   '/seller/shipping': typeof SellerShippingRoute
   '/seller/stock': typeof SellerStockRoute
   '/seller/subscription': typeof SellerSubscriptionRoute
+  '/seller/support': typeof SellerSupportRoute
   '/admin/': typeof AdminIndexRoute
   '/seller/': typeof SellerIndexRoute
   '/api/public/stripe-webhook': typeof ApiPublicStripeWebhookRoute
@@ -506,6 +515,7 @@ export interface FileRouteTypes {
     | '/seller/shipping'
     | '/seller/stock'
     | '/seller/subscription'
+    | '/seller/support'
     | '/admin/'
     | '/seller/'
     | '/api/public/stripe-webhook'
@@ -555,6 +565,7 @@ export interface FileRouteTypes {
     | '/seller/shipping'
     | '/seller/stock'
     | '/seller/subscription'
+    | '/seller/support'
     | '/admin'
     | '/seller'
     | '/api/public/stripe-webhook'
@@ -606,6 +617,7 @@ export interface FileRouteTypes {
     | '/seller/shipping'
     | '/seller/stock'
     | '/seller/subscription'
+    | '/seller/support'
     | '/admin/'
     | '/seller/'
     | '/api/public/stripe-webhook'
@@ -711,6 +723,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/seller/support': {
+      id: '/seller/support'
+      path: '/support'
+      fullPath: '/seller/support'
+      preLoaderRoute: typeof SellerSupportRouteImport
+      parentRoute: typeof SellerRoute
     }
     '/seller/subscription': {
       id: '/seller/subscription'
@@ -1038,6 +1057,7 @@ interface SellerRouteChildren {
   SellerShippingRoute: typeof SellerShippingRoute
   SellerStockRoute: typeof SellerStockRoute
   SellerSubscriptionRoute: typeof SellerSubscriptionRoute
+  SellerSupportRoute: typeof SellerSupportRoute
   SellerIndexRoute: typeof SellerIndexRoute
 }
 
@@ -1058,6 +1078,7 @@ const SellerRouteChildren: SellerRouteChildren = {
   SellerShippingRoute: SellerShippingRoute,
   SellerStockRoute: SellerStockRoute,
   SellerSubscriptionRoute: SellerSubscriptionRoute,
+  SellerSupportRoute: SellerSupportRoute,
   SellerIndexRoute: SellerIndexRoute,
 }
 
