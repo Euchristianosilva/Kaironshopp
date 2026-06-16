@@ -14,6 +14,7 @@ import {
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/hooks/use-auth";
 import { NotificationBell } from "./NotificationBell";
+import kaironLogo from "@/assets/kairon-logo.png.asset.json";
 
 export function Header() {
   const cartCount = useStore((s) => s.cart.reduce((a, i) => a + i.qty, 0));
@@ -43,11 +44,13 @@ export function Header() {
       {/* Main bar */}
       <div className="container mx-auto px-4 py-3 flex items-center gap-4">
         <Link to="/" className="flex items-center gap-2 shrink-0">
-          <div className="h-9 w-9 rounded-lg bg-gradient-brand grid place-items-center text-primary-foreground font-black shadow-brand">
-            M
-          </div>
+          <img
+            src={kaironLogo.url}
+            alt="Kairon Shop"
+            className="h-10 w-10 object-contain drop-shadow-sm"
+          />
           <span className="font-black text-xl tracking-tight hidden sm:inline">
-            Merca<span className="text-primary">Brasil</span>
+            Kairon<span className="text-primary"> Shop</span>
           </span>
         </Link>
 
