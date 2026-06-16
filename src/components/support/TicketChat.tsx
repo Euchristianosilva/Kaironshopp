@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getTicket, sendTicketMessage, updateTicketStatus } from "@/lib/support.functions";
+import { getTicket, sendTicketMessage, updateTicketStatus, transferTicket } from "@/lib/support.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, ArrowLeft, CheckCircle2, Clock, LifeBuoy } from "lucide-react";
+import { Send, ArrowLeft, CheckCircle2, Clock, LifeBuoy, ArrowRightLeft, Info } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -17,6 +17,14 @@ const STATUS_LABEL: Record<string, string> = {
   waiting_seller: "Aguardando vendedor",
   resolved: "Resolvido",
   closed: "Encerrado",
+};
+
+const DEPT_LABEL: Record<string, string> = {
+  financial: "Financeiro",
+  commercial: "Comercial",
+  logistics: "Logística",
+  technical: "Técnico",
+  general: "Atendimento Geral",
 };
 
 export function TicketChat({
