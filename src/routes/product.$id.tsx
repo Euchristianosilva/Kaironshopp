@@ -10,7 +10,7 @@ import { fetchProductById, fetchProducts } from "@/lib/products";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/hooks/use-auth";
 import { getOrCreateConversation } from "@/lib/chat.functions";
-import { createStripeCheckout } from "@/lib/checkout.functions";
+
 import { toast } from "sonner";
 import { Star, Heart, ShoppingCart, Truck, ShieldCheck, RotateCcw, Store, MessageCircle, Minus, Plus } from "lucide-react";
 
