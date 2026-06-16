@@ -70,7 +70,7 @@ export function SellerSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {ITEMS.map((item) => {
-                const showBadge = item.to === "/messages" && unreadTotal > 0;
+                const showBadge = item.to === "/seller/messages" && unreadTotal > 0;
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton asChild isActive={isActive(item.to)} tooltip={item.label}>
