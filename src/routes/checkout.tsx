@@ -79,6 +79,7 @@ function Checkout() {
           ...prev,
           street: prev.street || via.logradouro || "",
           complement: prev.complement || via.complemento || "",
+          neighborhood: prev.neighborhood || via.bairro || "",
           city: prev.city || via.localidade || "",
           state: prev.state || via.uf || "",
         }));
