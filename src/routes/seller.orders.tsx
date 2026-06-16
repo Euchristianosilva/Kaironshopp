@@ -12,8 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Package, Truck, CheckCircle2, Clock, X, Printer } from "lucide-react";
+import { Package, Truck, CheckCircle2, Clock, X, Printer, Copy, ExternalLink, Download } from "lucide-react";
 import { toast } from "sonner";
+import { openShippingLabel, downloadLabelHtml, type LabelData } from "@/lib/shipping-label";
 
 export const Route = createFileRoute("/seller/orders")({
   head: () => ({ meta: [{ title: "Pedidos — MercaBrasil" }] }),
@@ -96,7 +97,17 @@ function SellerOrdersPage() {
                       <TableCell><span className={`text-xs px-2 py-0.5 rounded font-semibold ${o.payment_status === "paid" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>{o.payment_status}</span></TableCell>
                       <TableCell><span className={`text-xs px-2 py-1 rounded-full font-semibold inline-flex items-center gap-1 ${st.cls}`}><Icon className="h-3 w-3" /> {st.label}</span></TableCell>
                       <TableCell className="text-xs font-mono text-muted-foreground">{o.tracking_code ?? "—"}</TableCell>
-                      <TableCell><Button size="sm" variant="outline" onClick={() => setSelectedId(o.id)}>Abrir</Button></TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 flex-wrap justify-end">
+                          {o.tracking_code && (
+                            <>
+                              <Button size="icon" variant="ghost" title="Copiar rastreio" onClick={() => { navigator.clipboard.writeText(o.tracking_code); toast.success("Rastreio copiado"); }}><Copy className="h-4 w-4" /></Button>
+                              <Button size="icon" variant="ghost" title="Abrir rastreamento" asChild><a href={`https://www.linkcorreios.com.br/?id=${encodeURIComponent(o.tracking_code)}`} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a></Button>
+                            </>
+                          )}
+                          <Button size="sm" variant="outline" onClick={() => setSelectedId(o.id)}>Abrir</Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -121,18 +132,31 @@ function OrderDetailDialog({ orderId, onClose }: { orderId: string; onClose: () 
   const [tracking, setTracking] = useState("");
   const [carrier, setCarrier] = useState("");
   const [notes, setNotes] = useState("");
+  const [shippingMethod, setShippingMethod] = useState("");
+  const [weight, setWeight] = useState<string>("");
 
   useEffect(() => {
     if (data?.order) {
-      setFulfillment(data.order.fulfillment_status ?? "pending");
-      setTracking(data.order.tracking_code ?? "");
-      setCarrier(data.order.carrier ?? "");
-      setNotes(data.order.seller_notes ?? "");
+      const o: any = data.order;
+      setFulfillment(o.fulfillment_status ?? "pending");
+      setTracking(o.tracking_code ?? "");
+      setCarrier(o.carrier ?? "");
+      setNotes(o.seller_notes ?? "");
+      setShippingMethod(o.shipping_method ?? o.shipping_service_name ?? "");
+      setWeight(o.package_weight_grams != null ? String(o.package_weight_grams) : "");
     }
   }, [data?.order]);
 
   const save = useMutation({
-    mutationFn: () => upd({ data: { orderId, fulfillment_status: fulfillment as any, tracking_code: tracking, carrier, seller_notes: notes } }),
+    mutationFn: () => upd({ data: {
+      orderId,
+      fulfillment_status: fulfillment as any,
+      tracking_code: tracking,
+      carrier,
+      seller_notes: notes,
+      shipping_method: shippingMethod,
+      package_weight_grams: weight ? parseInt(weight, 10) : undefined,
+    } }),
     onSuccess: () => {
       toast.success("Pedido atualizado");
       qc.invalidateQueries({ queryKey: ["seller-orders"] });
@@ -141,13 +165,50 @@ function OrderDetailDialog({ orderId, onClose }: { orderId: string; onClose: () 
     onError: (e: any) => toast.error(e.message),
   });
 
-  const printLabel = () => {
-    const addr = (data?.order?.shipping_address ?? {}) as any;
-    const html = `<html><head><title>Etiqueta #${orderId.slice(0,8)}</title><style>body{font-family:sans-serif;padding:24px}h1{font-size:20px}.box{border:2px solid #000;padding:16px;max-width:400px}</style></head><body><div class="box"><h1>Etiqueta de envio</h1><p><b>Pedido:</b> #${orderId.slice(0,8)}</p><p><b>Destinatário:</b> ${data?.buyer?.full_name ?? ""}</p><p><b>Endereço:</b><br/>${addr.line1 ?? ""} ${addr.number ?? ""}<br/>${addr.neighborhood ?? ""}<br/>${addr.city ?? ""} - ${addr.state ?? ""}<br/>CEP: ${addr.zip ?? ""}</p><p><b>Transportadora:</b> ${carrier || "—"}</p><p><b>Rastreio:</b> ${tracking || "—"}</p></div><script>window.print()</script></body></html>`;
-    const w = window.open("", "_blank");
-    w?.document.write(html);
-    w?.document.close();
+  const buildLabelData = (): LabelData => {
+    const addr: any = data?.order?.shipping_address ?? {};
+    const seller: any = (data as any)?.seller ?? {};
+    return {
+      orderId,
+      orderCreatedAt: data?.order?.created_at ?? new Date(),
+      trackingCode: tracking,
+      carrier,
+      shippingMethod,
+      fulfillmentStatus: fulfillment,
+      packageWeightGrams: weight ? parseInt(weight, 10) : null,
+      recipient: {
+        name: data?.buyer?.full_name ?? addr.name,
+        phone: addr.phone,
+        address: addr.line1 ?? addr.address,
+        number: addr.number,
+        complement: addr.complement,
+        neighborhood: addr.neighborhood ?? addr.district,
+        city: addr.city,
+        state: addr.state,
+        zip: addr.zip ?? addr.postal_code,
+      },
+      sender: {
+        name: seller.name,
+        phone: seller.phone ?? seller.whatsapp,
+        address: seller.origin_address,
+        number: seller.origin_number,
+        complement: seller.origin_complement,
+        neighborhood: seller.origin_district,
+        city: seller.origin_city,
+        state: seller.origin_state,
+        zip: seller.origin_zip,
+        logoUrl: seller.logo_url,
+      },
+      marketplaceName: "MercaBrasil",
+      trackingUrl: tracking ? `https://www.linkcorreios.com.br/?id=${encodeURIComponent(tracking)}` : undefined,
+      orderUrl: `${window.location.origin}/account`,
+    };
   };
+
+  const printLabel = () => openShippingLabel(buildLabelData());
+  const downloadLabel = () => downloadLabelHtml(buildLabelData());
+  const copyTracking = () => { if (!tracking) return; navigator.clipboard.writeText(tracking); toast.success("Rastreio copiado"); };
+  const openTracking = () => { if (!tracking) return; window.open(`https://www.linkcorreios.com.br/?id=${encodeURIComponent(tracking)}`, "_blank"); };
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -202,9 +263,17 @@ function OrderDetailDialog({ orderId, onClose }: { orderId: string; onClose: () 
                 <Select value={carrier} onValueChange={setCarrier}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    {["Correios","Jadlog","Loggi","Mercado Envios","Total Express","Própria"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {["Correios","Jadlog","Loggi","Mercado Envios","Total Express","Melhor Envio","Kangu","Frenet","Própria"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label>Serviço / método</Label>
+                <Input value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} placeholder="PAC, Sedex, .Package..." />
+              </div>
+              <div>
+                <Label>Peso (g)</Label>
+                <Input type="number" min={0} value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="500" />
               </div>
               <div className="sm:col-span-2">
                 <Label>Código de rastreio</Label>
@@ -216,8 +285,11 @@ function OrderDetailDialog({ orderId, onClose }: { orderId: string; onClose: () 
               </div>
             </section>
 
-            <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={printLabel}><Printer className="h-4 w-4" /> Imprimir etiqueta</Button>
+            <DialogFooter className="gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={copyTracking} disabled={!tracking}><Copy className="h-4 w-4" /> Copiar rastreio</Button>
+              <Button variant="outline" size="sm" onClick={openTracking} disabled={!tracking}><ExternalLink className="h-4 w-4" /> Abrir rastreamento</Button>
+              <Button variant="outline" size="sm" onClick={downloadLabel}><Download className="h-4 w-4" /> Baixar etiqueta</Button>
+              <Button variant="outline" size="sm" onClick={printLabel}><Printer className="h-4 w-4" /> Gerar / imprimir etiqueta</Button>
               <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Salvando..." : "Salvar alterações"}</Button>
             </DialogFooter>
           </div>
