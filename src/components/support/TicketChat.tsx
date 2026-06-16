@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getTicket, sendTicketMessage, updateTicketStatus } from "@/lib/support.functions";
+import { getTicket, sendTicketMessage, updateTicketStatus, transferTicket } from "@/lib/support.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, ArrowLeft, CheckCircle2, Clock, LifeBuoy } from "lucide-react";
+import { Send, ArrowLeft, CheckCircle2, Clock, LifeBuoy, ArrowRightLeft, Info } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -17,6 +17,14 @@ const STATUS_LABEL: Record<string, string> = {
   waiting_seller: "Aguardando vendedor",
   resolved: "Resolvido",
   closed: "Encerrado",
+};
+
+const DEPT_LABEL: Record<string, string> = {
+  financial: "Financeiro",
+  commercial: "Comercial",
+  logistics: "Logística",
+  technical: "Técnico",
+  general: "Atendimento Geral",
 };
 
 export function TicketChat({
@@ -32,6 +40,7 @@ export function TicketChat({
   const fetchTicket = useServerFn(getTicket);
   const send = useServerFn(sendTicketMessage);
   const setStatus = useServerFn(updateTicketStatus);
+  const transfer = useServerFn(transferTicket);
   const [text, setText] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -85,6 +94,17 @@ export function TicketChat({
     },
   });
 
+  const transferMut = useMutation({
+    mutationFn: async (department: string) =>
+      transfer({ data: { ticket_id: ticketId, department: department as any } }),
+    onSuccess: () => {
+      toast.success("Chamado transferido");
+      refetch();
+      qc.invalidateQueries({ queryKey: ["support-tickets-list"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao transferir"),
+  });
+
   if (isLoading || !data) {
     return <div className="p-6 text-sm text-muted-foreground">Carregando…</div>;
   }
@@ -104,23 +124,46 @@ export function TicketChat({
         <div className="min-w-0 flex-1">
           <div className="font-bold truncate">{t.subject}</div>
           <div className="text-[11px] text-muted-foreground truncate">
-            {t.sellers?.name ?? "Vendedor"} · {STATUS_LABEL[t.status]}
+            {t.sellers?.name ?? "Vendedor"} · {STATUS_LABEL[t.status]} · {DEPT_LABEL[t.department] ?? "—"}
           </div>
         </div>
         {canManage && (
-          <Select value={t.status} onValueChange={(v) => statusMut.mutate(v)}>
-            <SelectTrigger className="h-8 w-[170px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {Object.entries(STATUS_LABEL).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={t.department ?? "general"} onValueChange={(v) => { if (v !== t.department) transferMut.mutate(v); }}>
+              <SelectTrigger className="h-8 w-[180px]" title="Transferir para outro departamento">
+                <ArrowRightLeft className="h-3.5 w-3.5 mr-1 inline" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(DEPT_LABEL).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={t.status} onValueChange={(v) => statusMut.mutate(v)}>
+              <SelectTrigger className="h-8 w-[170px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(STATUS_LABEL).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
       </header>
 
       <div ref={scrollerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-muted/20">
         {(data as any).messages.map((m: any) => {
+          if (m.sender_type === "system") {
+            return (
+              <div key={m.id} className="flex justify-center">
+                <div className="text-[11px] bg-muted text-muted-foreground border border-border rounded-full px-3 py-1 flex items-center gap-1.5">
+                  <Info className="h-3 w-3" />
+                  {m.body}
+                </div>
+              </div>
+            );
+          }
           const mine = m.sender_id === me;
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>

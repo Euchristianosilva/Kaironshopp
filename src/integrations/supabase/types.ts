@@ -1527,6 +1527,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          department: Database["public"]["Enums"]["support_department"]
           id: string
           permissions: Json
           role: Database["public"]["Enums"]["support_role"]
@@ -1536,6 +1537,7 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          department?: Database["public"]["Enums"]["support_department"]
           id?: string
           permissions?: Json
           role?: Database["public"]["Enums"]["support_role"]
@@ -1545,6 +1547,7 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          department?: Database["public"]["Enums"]["support_department"]
           id?: string
           permissions?: Json
           role?: Database["public"]["Enums"]["support_role"]
@@ -1600,6 +1603,7 @@ export type Database = {
           assigned_to: string | null
           category: Database["public"]["Enums"]["ticket_category"]
           created_at: string
+          department: Database["public"]["Enums"]["support_department"]
           id: string
           last_message_at: string
           last_message_preview: string | null
@@ -1615,6 +1619,7 @@ export type Database = {
           assigned_to?: string | null
           category?: Database["public"]["Enums"]["ticket_category"]
           created_at?: string
+          department?: Database["public"]["Enums"]["support_department"]
           id?: string
           last_message_at?: string
           last_message_preview?: string | null
@@ -1630,6 +1635,7 @@ export type Database = {
           assigned_to?: string | null
           category?: Database["public"]["Enums"]["ticket_category"]
           created_at?: string
+          department?: Database["public"]["Enums"]["support_department"]
           id?: string
           last_message_at?: string
           last_message_preview?: string | null
@@ -1779,6 +1785,13 @@ export type Database = {
         Args: { _uid: string }
         Returns: Database["public"]["Enums"]["support_role"]
       }
+      support_can_view_ticket: {
+        Args: {
+          _ticket_dept: Database["public"]["Enums"]["support_department"]
+          _uid: string
+        }
+        Returns: boolean
+      }
       user_is_order_buyer: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
@@ -1819,6 +1832,12 @@ export type Database = {
         | "payout_paid"
         | "generic"
       product_condition: "new" | "refurbished" | "used"
+      support_department:
+        | "financial"
+        | "commercial"
+        | "logistics"
+        | "technical"
+        | "general"
       support_role: "agent" | "supervisor" | "manager"
       ticket_category:
         | "financial"
@@ -1993,6 +2012,13 @@ export const Constants = {
         "generic",
       ],
       product_condition: ["new", "refurbished", "used"],
+      support_department: [
+        "financial",
+        "commercial",
+        "logistics",
+        "technical",
+        "general",
+      ],
       support_role: ["agent", "supervisor", "manager"],
       ticket_category: [
         "financial",

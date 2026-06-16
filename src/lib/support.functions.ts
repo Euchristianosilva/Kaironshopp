@@ -3,10 +3,30 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type Category = "financial" | "products" | "orders" | "shipping" | "technical" | "other";
 type Status = "open" | "in_progress" | "waiting_seller" | "resolved" | "closed";
+type Department = "financial" | "commercial" | "logistics" | "technical" | "general";
+type AgentRole = "agent" | "supervisor" | "manager";
+
+const DEPARTMENTS: Department[] = ["financial", "commercial", "logistics", "technical", "general"];
+const AGENT_ROLES: AgentRole[] = ["agent", "supervisor", "manager"];
+const DEPT_LABEL_PT: Record<Department, string> = {
+  financial: "Financeiro",
+  commercial: "Comercial",
+  logistics: "Logística",
+  technical: "Técnico",
+  general: "Atendimento Geral",
+};
+
+function categoryToDepartment(c: Category): Department {
+  if (c === "financial") return "financial";
+  if (c === "shipping") return "logistics";
+  if (c === "technical") return "technical";
+  if (c === "products" || c === "orders") return "commercial";
+  return "general";
+}
 
 async function isSupportOrAdmin(supabase: any, userId: string) {
   const [{ data: agent }, { data: roles }] = await Promise.all([
-    supabase.from("support_agents").select("role, active, permissions").eq("user_id", userId).maybeSingle(),
+    supabase.from("support_agents").select("id, role, active, department, permissions").eq("user_id", userId).maybeSingle(),
     supabase.from("user_roles").select("role").eq("user_id", userId),
   ]);
   const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
@@ -50,6 +70,7 @@ export const createTicket = createServerFn({ method: "POST" })
         seller_id: seller?.id ?? null,
         subject: data.subject,
         category: data.category,
+        department: categoryToDepartment(data.category),
         last_message_preview: data.body.slice(0, 140),
       })
       .select("id")
@@ -65,18 +86,25 @@ export const createTicket = createServerFn({ method: "POST" })
 
 export const listAllTickets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { status?: Status | "all" }) => i)
+  .inputValidator((i: { status?: Status | "all"; department?: Department | "all" }) => i)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { isAdmin, isAgent } = await isSupportOrAdmin(supabase, userId);
+    const { isAdmin, isAgent, agent } = await isSupportOrAdmin(supabase, userId);
     if (!isAdmin && !isAgent) throw new Error("Sem permissão");
 
     let q = supabase
       .from("support_tickets")
-      .select("id, subject, category, status, seller_id, opened_by, assigned_to, last_message_at, last_message_preview, agent_unread, created_at, sellers(name, logo_url)")
+      .select("id, subject, category, status, department, seller_id, opened_by, assigned_to, last_message_at, last_message_preview, agent_unread, created_at, sellers(name, logo_url)")
       .order("last_message_at", { ascending: false })
       .limit(200);
     if (data.status && data.status !== "all") q = q.eq("status", data.status);
+
+    // Department scope: managers/admins see all; supervisors/agents pinned to their dept
+    if (!isAdmin && agent && agent.role !== "manager") {
+      q = q.eq("department", agent.department);
+    } else if (data.department && data.department !== "all") {
+      q = q.eq("department", data.department);
+    }
 
     const { data: tickets, error } = await q;
     if (error) throw new Error(error.message);
@@ -86,6 +114,8 @@ export const listAllTickets = createServerFn({ method: "POST" })
     const pmap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
     return {
       tickets: (tickets ?? []).map((t: any) => ({ ...t, opener: pmap.get(t.opened_by) ?? null })),
+      viewerAgent: agent ?? null,
+      isAdmin,
     };
   });
 
@@ -98,7 +128,7 @@ export const getTicket = createServerFn({ method: "POST" })
 
     const { data: ticket, error } = await supabase
       .from("support_tickets")
-      .select("id, subject, category, status, seller_id, opened_by, assigned_to, created_at, sellers(id, name, logo_url)")
+      .select("id, subject, category, status, department, seller_id, opened_by, assigned_to, created_at, sellers(id, name, logo_url)")
       .eq("id", data.ticket_id)
       .maybeSingle();
     if (error || !ticket) throw new Error("Chamado não encontrado");
@@ -183,6 +213,43 @@ export const updateTicketStatus = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const transferTicket = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { ticket_id: string; department: Department }) => {
+    if (!DEPARTMENTS.includes(i.department)) throw new Error("Departamento inválido");
+    if (!i.ticket_id) throw new Error("Chamado inválido");
+    return i;
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { isAdmin, isAgent } = await isSupportOrAdmin(supabase, userId);
+    if (!isAdmin && !isAgent) throw new Error("Sem permissão");
+
+    const { data: ticket } = await supabase
+      .from("support_tickets")
+      .select("id, department")
+      .eq("id", data.ticket_id)
+      .maybeSingle();
+    if (!ticket) throw new Error("Chamado não encontrado");
+    if (ticket.department === data.department) return { ok: true, message: null };
+
+    const { error: uErr } = await supabase
+      .from("support_tickets")
+      .update({ department: data.department, assigned_to: null })
+      .eq("id", data.ticket_id);
+    if (uErr) throw new Error(uErr.message);
+
+    const note = `Atendimento encaminhado para o setor ${DEPT_LABEL_PT[data.department]}.`;
+    const { data: msg, error: mErr } = await supabase
+      .from("support_messages")
+      .insert({ ticket_id: data.ticket_id, sender_id: userId, sender_type: "system", body: note })
+      .select("id, ticket_id, sender_id, sender_type, body, attachments, read_at, created_at")
+      .single();
+    if (mErr) throw new Error(mErr.message);
+
+    return { ok: true, message: msg };
+  });
+
 export const listAgents = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -191,7 +258,7 @@ export const listAgents = createServerFn({ method: "POST" })
     if (!isAdmin) throw new Error("Apenas administrador");
     const { data, error } = await supabase
       .from("support_agents")
-      .select("id, user_id, role, active, permissions, created_at")
+      .select("id, user_id, role, department, active, permissions, created_at")
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
     const ids = (data ?? []).map((a: any) => a.user_id);
@@ -202,15 +269,16 @@ export const listAgents = createServerFn({ method: "POST" })
 
 export const createAgent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { email: string; password: string; full_name: string; role: "agent" | "supervisor" | "manager" }) => {
+  .inputValidator((i: { email: string; password: string; full_name: string; role: AgentRole; department: Department }) => {
     const email = (i.email ?? "").trim().toLowerCase();
     const password = i.password ?? "";
     const full_name = (i.full_name ?? "").trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("E-mail inválido");
     if (password.length < 8) throw new Error("Senha precisa ter ao menos 8 caracteres");
     if (full_name.length < 2) throw new Error("Nome inválido");
-    if (!["agent", "supervisor", "manager"].includes(i.role)) throw new Error("Cargo inválido");
-    return { email, password, full_name, role: i.role };
+    if (!AGENT_ROLES.includes(i.role)) throw new Error("Cargo inválido");
+    if (!DEPARTMENTS.includes(i.department)) throw new Error("Departamento inválido");
+    return { email, password, full_name, role: i.role, department: i.department };
   })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -219,7 +287,6 @@ export const createAgent = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // create or fetch user
     const { data: created, error: cErr } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -228,7 +295,6 @@ export const createAgent = createServerFn({ method: "POST" })
     });
     let uid = created?.user?.id ?? null;
     if (cErr && !uid) {
-      // maybe already exists — try lookup
       const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
       const found = list?.users?.find((u: any) => (u.email ?? "").toLowerCase() === data.email);
       if (!found) throw new Error(cErr.message);
@@ -240,7 +306,7 @@ export const createAgent = createServerFn({ method: "POST" })
 
     const { error: aErr } = await supabaseAdmin
       .from("support_agents")
-      .upsert({ user_id: uid, role: data.role, active: true }, { onConflict: "user_id" });
+      .upsert({ user_id: uid, role: data.role, department: data.department, active: true }, { onConflict: "user_id" });
     if (aErr) throw new Error(aErr.message);
 
     return { ok: true, user_id: uid };
@@ -248,13 +314,14 @@ export const createAgent = createServerFn({ method: "POST" })
 
 export const updateAgent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { agent_id: string; role?: "agent" | "supervisor" | "manager"; active?: boolean; permissions?: Record<string, boolean> }) => i)
+  .inputValidator((i: { agent_id: string; role?: AgentRole; department?: Department; active?: boolean; permissions?: Record<string, boolean> }) => i)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { isAdmin } = await isSupportOrAdmin(supabase, userId);
     if (!isAdmin) throw new Error("Apenas administrador");
     const patch: any = {};
-    if (data.role) patch.role = data.role;
+    if (data.role && AGENT_ROLES.includes(data.role)) patch.role = data.role;
+    if (data.department && DEPARTMENTS.includes(data.department)) patch.department = data.department;
     if (typeof data.active === "boolean") patch.active = data.active;
     if (data.permissions) patch.permissions = data.permissions;
     const { error } = await supabase.from("support_agents").update(patch).eq("id", data.agent_id);
@@ -280,7 +347,7 @@ export const myAgentInfo = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data } = await supabase
       .from("support_agents")
-      .select("id, role, active, permissions")
+      .select("id, role, department, active, permissions")
       .eq("user_id", userId)
       .maybeSingle();
     return { agent: data ?? null };
