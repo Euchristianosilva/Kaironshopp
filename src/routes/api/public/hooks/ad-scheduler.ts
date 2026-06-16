@@ -8,17 +8,27 @@ export const Route = createFileRoute('/api/public/hooks/ad-scheduler')({
         const now = new Date().toISOString();
 
         // Activate scheduled campaigns whose start time has arrived
-        const { data: activated, error: actErr } = await supabaseAdmin
+        const { data: activatedStandard, error: actErr } = await supabaseAdmin
           .from('ad_campaigns')
           .update({ status: 'active' })
           .eq('status', 'scheduled')
-          .or('placement.neq.carousel,metadata->>admin_status.eq.approved,is_manual.eq.true')
+          .neq('placement', 'carousel')
           .lte('starts_at', now)
           .gt('ends_at', now)
           .select('id');
 
-        if (actErr) {
-          return new Response(JSON.stringify({ error: actErr.message }), {
+        const { data: activatedPremium, error: premiumActErr } = await supabaseAdmin
+          .from('ad_campaigns')
+          .update({ status: 'active' })
+          .eq('status', 'scheduled')
+          .eq('placement', 'carousel')
+          .contains('metadata', { admin_status: 'approved' })
+          .lte('starts_at', now)
+          .gt('ends_at', now)
+          .select('id');
+
+        if (actErr || premiumActErr) {
+          return new Response(JSON.stringify({ error: actErr?.message ?? premiumActErr?.message }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
           });
@@ -42,7 +52,7 @@ export const Route = createFileRoute('/api/public/hooks/ad-scheduler')({
         return new Response(
           JSON.stringify({
             success: true,
-            activated: activated?.length ?? 0,
+            activated: (activatedStandard?.length ?? 0) + (activatedPremium?.length ?? 0),
             ended: ended?.length ?? 0,
             timestamp: now,
           }),
