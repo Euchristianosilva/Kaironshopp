@@ -159,3 +159,11 @@
     color: var(--color-foreground);
   }
 }
+
+/* Reserve space for the fixed mobile bottom nav so page content
+   (last products, footers) is never hidden behind it. Mobile only. */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+}
