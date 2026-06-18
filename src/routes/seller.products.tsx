@@ -305,7 +305,9 @@ function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; pr
     { id: "stock", label: "Estoque" },
     { id: "variants", label: `Variações${variants.length ? ` (${variants.length})` : ""}` },
     { id: "shipping", label: "Frete" },
+    { id: "flash", label: "⚡ Oferta Relâmpago" },
   ];
+
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4 overflow-y-auto" onClick={onClose}>
