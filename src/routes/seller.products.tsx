@@ -212,6 +212,25 @@ function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; pr
   const saveMut = useMutation({
     mutationFn: async () => {
       const primary = images.find((i) => i.is_primary) ?? images[0];
+
+      // Flash-sale client validation
+      let flashEnabled = !!form.flash_sale_enabled;
+      let flashPrice: number | null = null;
+      let flashStart: string | null = null;
+      let flashEnd: string | null = null;
+      if (flashEnabled) {
+        const fp = Number(form.flash_sale_price);
+        if (!form.flash_sale_price || isNaN(fp) || fp <= 0) throw new Error("Informe um preço promocional válido");
+        if (fp >= Number(form.price)) throw new Error("O preço promocional deve ser menor que o preço normal");
+        if (!form.flash_sale_start || !form.flash_sale_end) throw new Error("Informe início e término da oferta relâmpago");
+        const s = new Date(form.flash_sale_start);
+        const e = new Date(form.flash_sale_end);
+        if (e <= s) throw new Error("A data de término deve ser posterior à de início");
+        flashPrice = fp;
+        flashStart = s.toISOString();
+        flashEnd = e.toISOString();
+      }
+
       const payload: any = {
         seller_id: sellerId,
         title: form.title, description: form.description || null,
@@ -230,7 +249,12 @@ function ProductFormModal({ sellerId, product, onClose }: { sellerId: string; pr
         condition: form.condition,
         own_delivery: form.own_delivery, carrier: form.carrier || null,
         has_variants: variants.length > 0,
+        flash_sale_enabled: flashEnabled,
+        flash_sale_price: flashPrice,
+        flash_sale_start: flashStart,
+        flash_sale_end: flashEnd,
       };
+
       let productId = product?.id;
       if (product) {
         const { error } = await supabase.from("products").update(payload).eq("id", product.id);
