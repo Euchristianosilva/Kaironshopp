@@ -13,10 +13,27 @@ function slugify(name: string) {
 
 export const createMyStore = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name: string; description?: string }) => {
+  .inputValidator((input: {
+    name: string;
+    description?: string;
+    document?: string;
+    phone?: string;
+    pix_key?: string;
+    category?: string;
+    origin_zip?: string;
+    origin_address?: string;
+    origin_number?: string;
+    origin_city?: string;
+    origin_state?: string;
+  }) => {
     if (!input?.name || input.name.trim().length < 2) throw new Error("Nome inválido");
     if (input.name.length > 80) throw new Error("Nome muito longo");
     if (input.description && input.description.length > 500) throw new Error("Descrição muito longa");
+    if (input.document) {
+      const d = input.document.replace(/\D/g, "");
+      if (d.length !== 11 && d.length !== 14) throw new Error("CPF/CNPJ inválido");
+    }
+    if (input.phone && input.phone.replace(/\D/g, "").length < 10) throw new Error("Telefone inválido");
     return input;
   })
   .handler(async ({ data, context }) => {
@@ -38,7 +55,16 @@ export const createMyStore = createServerFn({ method: "POST" })
         name: data.name.trim(),
         description: data.description?.trim() || null,
         slug: slugify(data.name),
-      })
+        document: data.document?.replace(/\D/g, "") || null,
+        phone: data.phone?.trim() || null,
+        pix_key: data.pix_key?.trim() || null,
+        category: data.category?.trim() || null,
+        origin_zip: data.origin_zip?.replace(/\D/g, "") || null,
+        origin_address: data.origin_address?.trim() || null,
+        origin_number: data.origin_number?.trim() || null,
+        origin_city: data.origin_city?.trim() || null,
+        origin_state: data.origin_state?.trim().toUpperCase().slice(0, 2) || null,
+      } as any)
       .select("id")
       .single();
     if (error) throw new Error(error.message);
@@ -51,3 +77,4 @@ export const createMyStore = createServerFn({ method: "POST" })
 
     return { sellerId: seller.id };
   });
+
