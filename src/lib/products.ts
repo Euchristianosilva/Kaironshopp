@@ -119,3 +119,19 @@ export async function fetchAllProducts(): Promise<Product[]> {
   if (error) throw error;
   return (data as DbProductRow[]).map((r) => mapProduct(r));
 }
+
+export async function fetchFlashSaleProducts(limit = 12): Promise<Product[]> {
+  const nowIso = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("is_active", true)
+    .eq("flash_sale_enabled", true)
+    .lte("flash_sale_start", nowIso)
+    .gt("flash_sale_end", nowIso)
+    .order("flash_sale_end", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return (data as DbProductRow[]).map((r) => mapProduct(r));
+}
+
