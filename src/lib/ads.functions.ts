@@ -316,7 +316,7 @@ export const listAllAdCampaigns = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: campaigns, error } = await supabaseAdmin
       .from("ad_campaigns")
-      .select("id, placement, status, starts_at, ends_at, amount_cents, currency, owner_id, product_id, products(title, image_url), sellers(name)")
+      .select("id, placement, status, starts_at, ends_at, amount_cents, currency, owner_id, product_id, image_url, products(title, image_url), sellers(name)")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw error;
