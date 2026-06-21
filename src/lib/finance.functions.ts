@@ -29,16 +29,21 @@ export const getSellerFinance = createServerFn({ method: "POST" })
       }
     }
 
-    const { data: salesRows } = await supabase
+    // Sensitive financial columns are not exposed via the Data API; fetch
+    // them through the trusted server client now that we've verified the
+    // caller owns this seller (via get_my_seller).
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: salesRows } = await supabaseAdmin
       .from("order_items")
       .select("gross_cents, platform_fee_cents, seller_net_cents, created_at, order_id, stripe_transfer_id")
       .eq("seller_id", seller.id)
       .order("created_at", { ascending: false })
       .limit(50);
 
-    const { data: payouts } = await supabase
+    const { data: payouts } = await supabaseAdmin
       .from("payouts")
-      .select("*")
+      .select("id, seller_id, amount_cents, currency, status, arrival_date, created_at")
       .eq("seller_id", seller.id)
       .order("created_at", { ascending: false })
       .limit(20);

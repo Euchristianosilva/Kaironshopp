@@ -42,8 +42,12 @@ export const getSellerReportData = createServerFn({ method: "POST" })
     const from = data.from ? new Date(data.from).toISOString() : new Date(Date.now() - 30 * 86400000).toISOString();
     const to = data.to ? new Date(data.to).toISOString() : new Date().toISOString();
 
+    // platform_fee_cents and seller_net_cents are revoked from authenticated;
+    // fetch via the trusted server client after verifying seller ownership.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     const [{ data: items }, { data: orders }, { data: products }] = await Promise.all([
-      context.supabase.from("order_items")
+      supabaseAdmin.from("order_items")
         .select("id, created_at, product_id, product_title, qty, gross_cents, platform_fee_cents, seller_net_cents, order_id, variant_label")
         .eq("seller_id", seller.id).gte("created_at", from).lte("created_at", to)
         .order("created_at", { ascending: false }),
