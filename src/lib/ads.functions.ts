@@ -458,6 +458,7 @@ export const createManualAdCampaign = createServerFn({ method: "POST" })
     startsAt?: string;
     endsAt?: string;
     priority?: number;
+    imageUrl?: string | null;
   }) => {
     if (!input.productId) throw new Error("productId obrigatório");
     if (!MANUAL_PLACEMENTS.includes(input.placement)) throw new Error("Posição inválida");
