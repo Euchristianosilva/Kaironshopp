@@ -27,16 +27,16 @@ const statusLabel: Record<string, { label: string; variant: any }> = {
   rejected: { label: "Rejeitado", variant: "destructive" },
 };
 
-const PLACEMENTS: { value: string; label: string }[] = [
-  { value: "banner_principal", label: "Banner Principal" },
-  { value: "destaque_home", label: "Destaque da Home" },
-  { value: "patrocinado", label: "Produtos Patrocinados" },
-  { value: "vitrine_topo", label: "Primeira Linha da Vitrine" },
-  { value: "categoria", label: "Categoria Específica" },
-  { value: "busca", label: "Resultado de Busca" },
-  { value: "premium", label: "Área Premium" },
-  { value: "carousel", label: "Carrossel" },
-  { value: "card", label: "Card" },
+const PLACEMENTS: { value: string; label: string; aspect: string; hint: string }[] = [
+  { value: "banner_principal", label: "Banner Principal", aspect: "aspect-[21/9]", hint: "Recomendado 1920×820" },
+  { value: "destaque_home", label: "Destaque da Home", aspect: "aspect-[16/9]", hint: "Recomendado 1280×720" },
+  { value: "patrocinado", label: "Produtos Patrocinados", aspect: "aspect-square", hint: "Recomendado 800×800" },
+  { value: "vitrine_topo", label: "Primeira Linha da Vitrine", aspect: "aspect-[4/3]", hint: "Recomendado 1200×900" },
+  { value: "categoria", label: "Categoria Específica", aspect: "aspect-[3/1]", hint: "Recomendado 1500×500" },
+  { value: "busca", label: "Resultado de Busca", aspect: "aspect-[3/1]", hint: "Recomendado 1500×500" },
+  { value: "premium", label: "Área Premium", aspect: "aspect-[16/9]", hint: "Recomendado 1280×720" },
+  { value: "carousel", label: "Carrossel", aspect: "aspect-[21/9]", hint: "Recomendado 1920×820" },
+  { value: "card", label: "Card", aspect: "aspect-square", hint: "Recomendado 800×800" },
 ];
 const placementLabel = (v: string) => PLACEMENTS.find((p) => p.value === v)?.label ?? v;
 
